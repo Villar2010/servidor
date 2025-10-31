@@ -40,18 +40,22 @@ export default function LoginPage() {
   const [isFirebaseSigningIn, setIsFirebaseSigningIn] = useState(false);
 
   useEffect(() => {
+    // Efeito simples para redirecionar se o utilizador já tiver uma sessão válida
     const checkSession = async () => {
       const session = await getSession();
       if (session.isLoggedIn) {
-        // Se já tem sessão, tenta login anônimo e redireciona
-        if (auth && !auth.currentUser) {
-           signInAnonymously(auth).then(() => {
-             router.push('/dashboard');
-           }).catch((error) => {
-              console.error("Firebase anonymous sign-in error on session check:", error);
-           });
-        } else if (auth && auth.currentUser) {
+        // Se já tem sessão e um utilizador do Firebase, vai direto para o dashboard
+        if (auth?.currentUser) {
             router.push('/dashboard');
+        } else if (auth) {
+            // Se tem sessão mas não tem utilizador do Firebase, faz o login anónimo
+            setIsFirebaseSigningIn(true);
+            signInAnonymously(auth)
+                .then(() => router.push('/dashboard'))
+                .catch((error) => {
+                    console.error("Firebase sign-in on session check failed:", error);
+                    setIsFirebaseSigningIn(false);
+                });
         }
       }
     };
@@ -59,14 +63,16 @@ export default function LoginPage() {
   }, [router, auth]);
 
   useEffect(() => {
+    // Este efeito lida APENAS com o resultado da submissão do formulário
     if (state?.success && auth) {
       setIsFirebaseSigningIn(true);
       signInAnonymously(auth)
         .then(() => {
+          // O redirecionamento é a última etapa após TODAS as autenticações
           router.push('/dashboard');
         })
         .catch((error) => {
-          console.error("Firebase anonymous sign-in failed:", error);
+          console.error("Firebase anonymous sign-in failed after form submission:", error);
           toast({
             title: "Erro de Autenticação Firebase",
             description: "Não foi possível autenticar com o Firebase. Tente novamente.",
