@@ -26,6 +26,7 @@ async function handleValidation(request: NextRequest, isPost: boolean): Promise<
         }
     } else {
         const { searchParams } = new URL(request.url);
+        // Acessa os parâmetros diretamente com .get() para evitar a enumeração
         accountNumber = searchParams.get('accountNumber');
         brokerServer = searchParams.get('brokerServer');
     }
