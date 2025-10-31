@@ -27,7 +27,7 @@ import ClientForm from "./client-form";
 import ClientTableActions from "./client-table-actions";
 import { Input } from "./ui/input";
 import { useCollection } from "@/firebase/firestore/use-collection";
-import { useFirestore, useMemoFirebase } from "@/firebase";
+import { useFirestore, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, writeBatch, doc } from "firebase/firestore";
 import { Skeleton } from "./ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
@@ -39,13 +39,17 @@ export default function ClientTable() {
   const [searchTerm, setSearchTerm] = React.useState("");
   
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
 
   const clientsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    // Aguarda o usuário e o firestore estarem prontos
+    if (!firestore || !user) return null;
     return query(collection(firestore, "clients"));
-  }, [firestore]);
+  }, [firestore, user]);
 
-  const { data: clients, isLoading, error } = useCollection<Client>(clientsQuery);
+  // `isLoading` do `useCollection` reflete o carregamento da query,
+  // `isUserLoading` reflete o carregamento da autenticação.
+  const { data: clients, isLoading: isCollectionLoading, error } = useCollection<Client>(clientsQuery);
   
   const handleAddClient = () => {
     setSelectedClient(null);
@@ -116,6 +120,9 @@ export default function ClientTable() {
   }
 
   const { toast } = useToast();
+  
+  // O carregamento geral agora considera tanto a autenticação quanto a coleção
+  const isLoading = isUserLoading || (user && isCollectionLoading);
 
   const renderTableContent = () => {
     if (isLoading) {
