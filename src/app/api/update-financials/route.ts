@@ -1,8 +1,8 @@
 // src/app/api/update-financials/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { initializeFirebase } from '@/firebase/server';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
 // Esquema de validação para os dados financeiros recebidos
 const FinancialDataSchema = z.object({
@@ -14,9 +14,31 @@ const FinancialDataSchema = z.object({
   totalInBRL: z.number().optional(),
 });
 
-async function getDb() {
-  const { db } = await initializeFirebase();
-  return db;
+// Guarda a instância inicializada para reutilização
+let adminApp: App;
+
+/**
+ * Inicializa o Firebase Admin SDK de forma idempotente e robusta.
+ */
+function initializeAdminApp() {
+    if (getApps().length) {
+        return getApp();
+    }
+
+    const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!serviceAccountString) {
+        throw new Error('A variável de ambiente FIREBASE_SERVICE_ACCOUNT não está definida.');
+    }
+
+    try {
+        const serviceAccount = JSON.parse(Buffer.from(serviceAccountString, 'base64').toString('utf8'));
+        return initializeApp({
+            credential: cert(serviceAccount),
+        });
+    } catch (e) {
+        console.error('Falha ao inicializar Firebase Admin SDK:', e);
+        throw new Error('Não foi possível inicializar o Firebase Admin SDK.');
+    }
 }
 
 export async function POST(request: NextRequest) {
@@ -35,12 +57,16 @@ export async function POST(request: NextRequest) {
     }
     
     const financialData = validationResult.data;
-    const db = await getDb();
-    const clientRef = doc(db, 'clients', financialData.accountNumber);
+    
+    // Garante que o app admin está inicializado
+    adminApp = initializeAdminApp();
+    const db = getFirestore(adminApp);
+    
+    const clientRef = db.collection('clients').doc(financialData.accountNumber);
 
-    const docSnap = await getDoc(clientRef);
+    const docSnap = await clientRef.get();
 
-    if (!docSnap.exists()) {
+    if (!docSnap.exists) {
       return NextResponse.json({
         success: false,
         error: `Cliente com conta ${financialData.accountNumber} não encontrado.`,
@@ -53,7 +79,8 @@ export async function POST(request: NextRequest) {
       lastUpdate: new Date().toISOString(),
     };
     
-    await setDoc(clientRef, dataToUpdate, { merge: true });
+    // Usando `set` com `merge: true` do Admin SDK, que é equivalente ao `setDoc` com merge do client SDK.
+    await clientRef.set(dataToUpdate, { merge: true });
 
     return NextResponse.json({
       success: true,
