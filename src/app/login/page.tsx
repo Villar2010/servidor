@@ -12,10 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Loader2, LogIn } from 'lucide-react';
-import { useEffect, useState, FormEvent } from 'react';
+import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/firebase';
-import { getSession } from '@/app/actions';
 import { signInAnonymously } from 'firebase/auth';
 
 export default function LoginPage() {
@@ -23,25 +22,6 @@ export default function LoginPage() {
   const auth = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
-
-  // Efeito para redirecionar se o usuário já estiver logado (sessão do servidor + auth do firebase)
-  useEffect(() => {
-    // Não executa a lógica se o auth não estiver pronto
-    if (!auth) return;
-
-    const checkSessionAndAuth = async () => {
-      // Aguarda a sessão do servidor e o usuário do Firebase
-      const session = await getSession();
-      // O auth.currentUser pode demorar um pouco para ser preenchido
-      // O listener onAuthStateChanged no provider cuida disso
-      if (session.isLoggedIn && auth.currentUser) {
-        router.push('/dashboard');
-      }
-    };
-
-    checkSessionAndAuth();
-    // A dependência em `auth.currentUser` pode ser útil se ele mudar
-  }, [auth, router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -53,7 +33,7 @@ export default function LoginPage() {
     const password = formData.get('password') as string;
 
     try {
-      // 1. Chamar a API de login para criar a sessão do servidor
+      // 1. Chamar a API de login para criar a sessão do servidor e esperar pela resposta.
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -66,24 +46,22 @@ export default function LoginPage() {
         throw new Error(result.error || 'Falha ao fazer login');
       }
 
-      // 2. Se a API de login for bem-sucedida, autenticar anonimamente no Firebase
+      // 2. Se a API de login for bem-sucedida, autenticar anonimamente no Firebase e esperar pela conclusão.
       if (!auth) {
         throw new Error('Serviço de autenticação do Firebase não está disponível.');
       }
       
-      // ESPERA a autenticação do Firebase ser concluída
       await signInAnonymously(auth);
       
-      // 3. APENAS APÓS autenticação no Firebase, redirecionar para o dashboard
+      // 3. APENAS APÓS ambas as autenticações (sessão e Firebase) serem bem-sucedidas, redirecionar para o dashboard.
       router.push('/dashboard');
+      // O `push` é suficiente. Se houver problemas de cache, o `replace` é uma alternativa.
 
     } catch (e: any) {
       console.error("Login process failed:", e);
       setError(e.message || 'Ocorreu um erro durante o login.');
-      setIsPending(false);
+      setIsPending(false); // Apenas definir como false em caso de erro.
     } 
-    // O isPending só se torna false em caso de erro, 
-    // pois em caso de sucesso, a página será redirecionada.
   };
 
 
@@ -119,7 +97,7 @@ export default function LoginPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <Button type="submit" className="w-full" disabled={isPending}>
+            <Button type="submit" className="w-full" disabled={isPending || !auth}>
               {isPending ? <Loader2 className="animate-spin" /> : <LogIn />}
               Entrar
             </Button>
