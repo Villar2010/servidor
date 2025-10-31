@@ -15,7 +15,7 @@ import { AlertCircle, Loader2, LogIn } from 'lucide-react';
 import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase';
-import { signInWithEmailAndPassword, AuthErrorCodes } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, AuthErrorCodes, AuthError } from 'firebase/auth';
 
 const adminUser = {
   email: 'coinsnegotiate@gmail.com',
@@ -45,22 +45,30 @@ export default function LoginPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    try {
-      if (!auth) {
-        throw new Error('Serviço de autenticação do Firebase não está disponível.');
-      }
-      
-      await signInWithEmailAndPassword(auth, email, password);
-      
-      // O useEffect cuidará do redirecionamento
-      // router.push('/dashboard');
+    if (!auth) {
+      setError('Serviço de autenticação do Firebase não está disponível.');
+      setIsPending(false);
+      return;
+    }
 
+    try {
+      // Tenta fazer o login primeiro
+      await signInWithEmailAndPassword(auth, email, password);
+      // Se for bem-sucedido, o useEffect cuidará do redirecionamento
     } catch (e: any) {
-      console.error("Firebase Login process failed:", e);
-      if (e.code === AuthErrorCodes.INVALID_LOGIN_CREDENTIALS || e.code === "auth/wrong-password" || e.code === "auth/user-not-found" || e.code === 'auth/invalid-credential') {
-        setError("Credenciais inválidas. Verifique seu e-mail e senha. (O utilizador pode não existir na base de dados do Firebase).");
+      // Se o erro for que o usuário não existe, cria o usuário
+      if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+        try {
+          await createUserWithEmailAndPassword(auth, email, password);
+          // O login é feito automaticamente após a criação, o useEffect redirecionará
+        } catch (creationError: any) {
+          console.error("Firebase Creation process failed:", creationError);
+          setError(creationError.message || 'Ocorreu um erro ao tentar criar a conta de administrador.');
+        }
       } else {
-        setError(e.message || 'Ocorreu um erro durante o login.');
+        // Para outros erros de login (senha incorreta, etc.)
+        console.error("Firebase Login process failed:", e);
+        setError("Credenciais inválidas ou outro erro ocorreu. Verifique o console.");
       }
     } finally {
         setIsPending(false);
