@@ -17,16 +17,14 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/firebase';
 import { getSession } from '@/app/actions';
 import { signInAnonymously } from 'firebase/auth';
-import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
-  const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
-  // Efeito para redirecionar se o usuário já estiver logado
+  // Efeito para redirecionar se o usuário já estiver logado (sessão do servidor + auth do firebase)
   useEffect(() => {
     if (!auth) return;
 
@@ -34,14 +32,6 @@ export default function LoginPage() {
       const session = await getSession();
       if (session.isLoggedIn && auth.currentUser) {
         router.push('/dashboard');
-      } else if (session.isLoggedIn && !auth.currentUser) {
-        // Tenta logar anonimamente se a sessão existe mas o user do firebase não
-        try {
-          await signInAnonymously(auth);
-          router.push('/dashboard');
-        } catch (authError) {
-          console.error("Firebase anonymous sign-in failed on session check:", authError);
-        }
       }
     };
 
@@ -58,7 +48,7 @@ export default function LoginPage() {
     const password = formData.get('password') as string;
 
     try {
-      // 1. Chamar a API de login
+      // 1. Chamar a API de login para criar a sessão do servidor
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -71,21 +61,23 @@ export default function LoginPage() {
         throw new Error(result.error || 'Falha ao fazer login');
       }
 
-      // 2. Se a API de login for bem-sucedida, autenticar no Firebase
-      if (auth) {
-        await signInAnonymously(auth);
-        // 3. Após autenticar no Firebase, redirecionar
-        router.push('/dashboard');
-      } else {
+      // 2. Se a API de login for bem-sucedida, autenticar anonimamente no Firebase
+      if (!auth) {
         throw new Error('Serviço de autenticação do Firebase não está disponível.');
       }
+      await signInAnonymously(auth);
+      
+      // 3. Após autenticação no Firebase, redirecionar para o dashboard
+      // router.push empurra uma nova entrada no histórico de navegação
+      router.push('/dashboard');
 
     } catch (e: any) {
       console.error("Login process failed:", e);
       setError(e.message || 'Ocorreu um erro durante o login.');
       setIsPending(false);
     } 
-    // Não defina isPending como false aqui, pois o redirecionamento deve acontecer
+    // O isPending só se torna false em caso de erro, 
+    // pois em caso de sucesso, a página será redirecionada.
   };
 
 
