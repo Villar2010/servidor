@@ -115,4 +115,3 @@ export default function ClientTableActions({ client, onEdit, onDeleteSuccess }: 
     </AlertDialog>
   );
 }
-    

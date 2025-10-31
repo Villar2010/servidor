@@ -292,5 +292,3 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
     </Dialog>
   );
 }
-
-    
