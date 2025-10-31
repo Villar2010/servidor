@@ -4,7 +4,7 @@
 import * as React from "react";
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { PlusCircle, Search, AlertCircle, Loader2, FileJson } from "lucide-react";
+import { PlusCircle, Search, AlertCircle, Loader2, FileDown } from "lucide-react";
 import { Client, ClientSchema } from "@/lib/types";
 import {
   Table,
@@ -61,6 +61,33 @@ export default function ClientTable() {
      // A UI irá re-renderizar automaticamente por causa do listener do useCollection
   };
 
+  const handleExportJson = () => {
+    if (!filteredClients || filteredClients.length === 0) {
+      toast({
+        title: "Nenhum dado para exportar",
+        description: "Não há clientes para serem exportados.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const jsonString = JSON.stringify(filteredClients, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "clientes.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Exportação Concluída",
+      description: `${filteredClients.length} clientes foram exportados para clientes.json`,
+    });
+  };
+
   const filteredClients = React.useMemo(() => {
     if (!clients) return [];
     
@@ -87,6 +114,8 @@ export default function ClientTable() {
     if (value === undefined || value === null) return '-';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   }
+
+  const { toast } = useToast();
 
   const renderTableContent = () => {
     if (isLoading) {
@@ -188,6 +217,10 @@ export default function ClientTable() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
+              <Button onClick={handleExportJson} variant="outline" className="w-full sm:w-auto">
+                <FileDown className="mr-2 h-4 w-4" />
+                Exportar JSON
+              </Button>
               <Button onClick={handleAddClient} className="w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Cliente
               </Button>
