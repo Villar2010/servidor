@@ -1,9 +1,7 @@
 // src/app/api/validate/route.ts
 import { initializeFirebase } from '@/firebase/server';
 import { Client } from '@/lib/types';
-// A importação direta de 'firebase-admin/firestore' foi removida para evitar conflitos.
-// Usaremos o objeto 'db' do 'initializeFirebase' que já é uma instância do Firestore Admin.
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 
 /**
  * Lida com requisições GET e POST para validação.
@@ -40,7 +38,6 @@ async function handleValidation(request: NextRequest, isPost: boolean): Promise<
 
      // Usa o SDK Admin do Firebase (server-side)
      const { db } = await initializeFirebase();
-     // Sintaxe correta do Admin SDK para referenciar um documento
      const clientRef = db.doc(`clients/${accountNumber}`);
      const docSnap = await clientRef.get();
 
@@ -48,7 +45,13 @@ async function handleValidation(request: NextRequest, isPost: boolean): Promise<
 
      if (docSnap.exists) {
          const client = docSnap.data() as Client;
-         if (client.brokerServer === brokerServer) {
+         
+         // Lógica de comparação robusta: normaliza as strings antes de comparar.
+         // Remove espaços em branco e converte para minúsculas.
+         const brokerServerFromDB = client.brokerServer?.trim().toLowerCase();
+         const brokerServerFromRequest = brokerServer.trim().toLowerCase();
+
+         if (brokerServerFromDB === brokerServerFromRequest) {
              if (client.status === 'Liberado') {
                  result = { status: 'authorized', reason: 'Cliente encontrado e com status liberado.' };
              } else {
