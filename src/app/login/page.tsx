@@ -44,13 +44,6 @@ export default function LoginPage() {
     const formData = new FormData(event.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
-    
-    // Validação local simples (pode ser removida se o login for apenas via Firebase)
-    if (adminUser.email !== email) {
-        setError('Credenciais inválidas.');
-        setIsPending(false);
-        return;
-    }
 
     try {
       if (!auth) {
@@ -65,7 +58,7 @@ export default function LoginPage() {
     } catch (e: any) {
       console.error("Firebase Login process failed:", e);
       if (e.code === AuthErrorCodes.INVALID_LOGIN_CREDENTIALS || e.code === "auth/wrong-password" || e.code === "auth/user-not-found" || e.code === 'auth/invalid-credential') {
-        setError("Credenciais inválidas. Verifique seu e-mail e senha.");
+        setError("Credenciais inválidas. Verifique seu e-mail e senha. (O utilizador pode não existir na base de dados do Firebase).");
       } else {
         setError(e.message || 'Ocorreu um erro durante o login.');
       }
