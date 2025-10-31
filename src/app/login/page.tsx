@@ -26,16 +26,21 @@ export default function LoginPage() {
 
   // Efeito para redirecionar se o usuário já estiver logado (sessão do servidor + auth do firebase)
   useEffect(() => {
+    // Não executa a lógica se o auth não estiver pronto
     if (!auth) return;
 
     const checkSessionAndAuth = async () => {
+      // Aguarda a sessão do servidor e o usuário do Firebase
       const session = await getSession();
+      // O auth.currentUser pode demorar um pouco para ser preenchido
+      // O listener onAuthStateChanged no provider cuida disso
       if (session.isLoggedIn && auth.currentUser) {
         router.push('/dashboard');
       }
     };
 
     checkSessionAndAuth();
+    // A dependência em `auth.currentUser` pode ser útil se ele mudar
   }, [auth, router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -65,10 +70,11 @@ export default function LoginPage() {
       if (!auth) {
         throw new Error('Serviço de autenticação do Firebase não está disponível.');
       }
+      
+      // ESPERA a autenticação do Firebase ser concluída
       await signInAnonymously(auth);
       
-      // 3. Após autenticação no Firebase, redirecionar para o dashboard
-      // router.push empurra uma nova entrada no histórico de navegação
+      // 3. APENAS APÓS autenticação no Firebase, redirecionar para o dashboard
       router.push('/dashboard');
 
     } catch (e: any) {
