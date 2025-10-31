@@ -39,36 +39,29 @@ export default function LoginPage() {
   const { toast } = useToast();
   const [isFirebaseSigningIn, setIsFirebaseSigningIn] = useState(false);
 
+  // Efeito para verificar se já existe uma sessão e um utilizador do Firebase
   useEffect(() => {
-    // Efeito simples para redirecionar se o utilizador já tiver uma sessão válida
-    const checkSession = async () => {
+    const checkSessionAndRedirect = async () => {
       const session = await getSession();
-      if (session.isLoggedIn) {
-        // Se já tem sessão e um utilizador do Firebase, vai direto para o dashboard
-        if (auth?.currentUser) {
-            router.push('/dashboard');
-        } else if (auth) {
-            // Se tem sessão mas não tem utilizador do Firebase, faz o login anónimo
-            setIsFirebaseSigningIn(true);
-            signInAnonymously(auth)
-                .then(() => router.push('/dashboard'))
-                .catch((error) => {
-                    console.error("Firebase sign-in on session check failed:", error);
-                    setIsFirebaseSigningIn(false);
-                });
-        }
+      // Apenas redireciona se AMBOS a sessão do servidor e o utilizador do Firebase existirem.
+      if (session.isLoggedIn && auth?.currentUser) {
+        router.push('/dashboard');
       }
     };
-    checkSession();
+
+    if (auth) { // Garante que o SDK do auth está disponível
+      checkSessionAndRedirect();
+    }
   }, [router, auth]);
 
+
+  // Efeito para lidar com o resultado do formulário e iniciar o login no Firebase
   useEffect(() => {
-    // Este efeito lida APENAS com o resultado da submissão do formulário
     if (state?.success && auth) {
       setIsFirebaseSigningIn(true);
       signInAnonymously(auth)
         .then(() => {
-          // O redirecionamento é a última etapa após TODAS as autenticações
+          // Apenas redireciona APÓS o login anónimo ter sucesso
           router.push('/dashboard');
         })
         .catch((error) => {
