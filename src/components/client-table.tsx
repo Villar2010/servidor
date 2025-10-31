@@ -37,9 +37,7 @@ export default function ClientTable() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [selectedClient, setSelectedClient] = React.useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = React.useState("");
-  const { toast } = useToast();
-  const [isImporting, setIsImporting] = React.useState(false);
-
+  
   const firestore = useFirestore();
 
   const clientsQuery = useMemoFirebase(() => {
@@ -61,69 +59,6 @@ export default function ClientTable() {
 
   const handleSuccess = () => {
      // A UI irá re-renderizar automaticamente por causa do listener do useCollection
-  };
-
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!firestore) {
-      toast({ title: "Erro", description: "Firestore não inicializado.", variant: "destructive" });
-      return;
-    }
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsImporting(true);
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const text = e.target?.result;
-        if (typeof text !== 'string') {
-          throw new Error("Não foi possível ler o arquivo.");
-        }
-        const clientsToImport = JSON.parse(text);
-
-        if (!Array.isArray(clientsToImport)) {
-            throw new Error("O arquivo JSON deve conter um array de clientes.");
-        }
-
-        const batch = writeBatch(firestore);
-        
-        clientsToImport.forEach((clientData: any) => {
-          try {
-            // Garante que o lastUpdate seja uma string
-            const clientWithUpdate = {
-              ...clientData,
-              lastUpdate: new Date().toISOString(),
-            };
-            
-            const validatedData = ClientSchema.parse(clientWithUpdate);
-            const docRef = doc(firestore, "clients", validatedData.accountNumber);
-            batch.set(docRef, validatedData, { merge: true });
-          } catch(validationError) {
-             // Pula registros inválidos e loga o erro
-             console.warn(`Registro inválido pulado durante a importação: ${clientData.accountNumber}`, validationError);
-          }
-        });
-
-        await batch.commit();
-        toast({
-          title: "Importação Concluída",
-          description: `${clientsToImport.length} clientes foram importados/atualizados com sucesso.`,
-        });
-      } catch (err) {
-        console.error("Erro na importação:", err);
-        const errorMessage = err instanceof Error ? err.message : "Ocorreu um erro desconhecido.";
-        toast({
-          title: "Erro na Importação",
-          description: `Não foi possível importar os clientes. Verifique o formato do arquivo. Detalhes: ${errorMessage}`,
-          variant: "destructive",
-        });
-      } finally {
-        setIsImporting(false);
-         // Limpa o valor do input para permitir re-importar o mesmo arquivo
-         event.target.value = '';
-      }
-    };
-    reader.readAsText(file);
   };
 
   const filteredClients = React.useMemo(() => {
@@ -253,20 +188,6 @@ export default function ClientTable() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-               <Button asChild variant="outline" className="w-full sm:w-auto">
-                <label htmlFor="import-json" className="cursor-pointer">
-                  {isImporting ? <Loader2 className="mr-2 animate-spin" /> : <FileJson className="mr-2" />}
-                   Importar de JSON
-                   <input
-                    id="import-json"
-                    type="file"
-                    accept=".json"
-                    className="sr-only"
-                    onChange={handleImport}
-                    disabled={isImporting}
-                  />
-                </label>
-              </Button>
               <Button onClick={handleAddClient} className="w-full sm:w-auto">
                 <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Cliente
               </Button>
@@ -306,5 +227,3 @@ export default function ClientTable() {
     </>
   );
 }
-
-    
