@@ -37,44 +37,51 @@ export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
   const { toast } = useToast();
-  const [isFirebaseSigningIn, setIsFirebaseSigningIn] = useState(false);
 
-  // Efeito para verificar se já existe uma sessão e um utilizador do Firebase
   useEffect(() => {
-    const checkSessionAndRedirect = async () => {
+    // Se o formulário de login do servidor foi bem-sucedido, redireciona para o dashboard.
+    // O dashboard/provider cuidará da lógica de autenticação do Firebase.
+    if (state?.success) {
+      router.push('/dashboard');
+    }
+  }, [state, router]);
+
+  // Efeito para garantir que o usuário do Firebase esteja logado se a sessão do servidor existir.
+  useEffect(() => {
+    if (!auth) return;
+
+    const checkSessionAndAuth = async () => {
       const session = await getSession();
-      // Apenas redireciona se AMBOS a sessão do servidor e o utilizador do Firebase existirem.
-      if (session.isLoggedIn && auth?.currentUser) {
-        router.push('/dashboard');
+      // Se a sessão do servidor existir, mas o usuário do Firebase não, faça o login anônimo.
+      if (session.isLoggedIn && !auth.currentUser) {
+        try {
+          await signInAnonymously(auth);
+          // Redireciona apenas se já estivermos na página de login
+          // Isso cobre o caso de um refresh na página de login quando já logado.
+          if (window.location.pathname === '/login') {
+            router.push('/dashboard');
+          }
+        } catch (error) {
+           console.error("Firebase anonymous sign-in failed:", error);
+           toast({
+             title: "Erro de Autenticação Firebase",
+             description: "Não foi possível autenticar com o Firebase. A página será recarregada.",
+             variant: "destructive",
+           });
+           // Forçar um reload pode resolver problemas de inicialização
+           setTimeout(() => window.location.reload(), 2000);
+        }
+      } else if (session.isLoggedIn && auth.currentUser) {
+        // Se ambos existem, vá para o dashboard.
+         if (window.location.pathname === '/login') {
+            router.push('/dashboard');
+         }
       }
     };
 
-    if (auth) { // Garante que o SDK do auth está disponível
-      checkSessionAndRedirect();
-    }
-  }, [router, auth]);
+    checkSessionAndAuth();
+  }, [auth, router, toast]);
 
-
-  // Efeito para lidar com o resultado do formulário e iniciar o login no Firebase
-  useEffect(() => {
-    if (state?.success && auth) {
-      setIsFirebaseSigningIn(true);
-      signInAnonymously(auth)
-        .then(() => {
-          // Apenas redireciona APÓS o login anónimo ter sucesso
-          router.push('/dashboard');
-        })
-        .catch((error) => {
-          console.error("Firebase anonymous sign-in failed after form submission:", error);
-          toast({
-            title: "Erro de Autenticação Firebase",
-            description: "Não foi possível autenticar com o Firebase. Tente novamente.",
-            variant: "destructive",
-          });
-          setIsFirebaseSigningIn(false);
-        });
-    }
-  }, [state, auth, router, toast]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -95,12 +102,11 @@ export default function LoginPage() {
                 name="email"
                 placeholder="admin@example.com"
                 required
-                disabled={isFirebaseSigningIn}
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" name="password" required disabled={isFirebaseSigningIn} />
+              <Input id="password" type="password" name="password" required />
             </div>
             {state?.error && (
               <Alert variant="destructive">
@@ -110,7 +116,6 @@ export default function LoginPage() {
               </Alert>
             )}
             <LoginButton />
-            {isFirebaseSigningIn && <p className="text-center text-sm text-muted-foreground">Autenticando com o Firebase...</p>}
           </form>
         </CardContent>
       </Card>

@@ -16,6 +16,7 @@ export const getSession = async () => {
   noStore(); // Impede o cache da sessão
   const session = await getIronSession<SessionData>(cookies(), sessionOptions);
   if (!session.isLoggedIn) {
+    session.destroy(); // Garante que sessões inválidas sejam limpas
     return defaultSession;
   }
   return {
@@ -25,6 +26,7 @@ export const getSession = async () => {
 };
 
 export const login = async (prevState: any, formData: FormData) => {
+  noStore();
   const session = await getIronSession<SessionData>(cookies(), sessionOptions);
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
@@ -37,7 +39,7 @@ export const login = async (prevState: any, formData: FormData) => {
   session.email = email;
   await session.save();
 
-  // Não redireciona mais aqui, o cliente fará isso após o login anônimo do Firebase
+  // Apenas retorna o sucesso. O cliente fará o redirecionamento.
   return { success: true };
 };
 
