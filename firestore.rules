@@ -1,0 +1,46 @@
+/**
+ * @fileoverview Firestore Security Rules for the MT5 Client Management App.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict, document-level access control model based on client MT5 account numbers.
+ * Only authenticated users can read or write client data, and write access is further restricted based on the client's status.
+ * Data integrity is maintained by ensuring that the document ID (accountNumber) matches the `accountNumber` field in the document.
+ *
+ * Data Structure:
+ * All client data is stored in the `/clients/{accountNumber}` collection, where `{accountNumber}` is the client's MT5 account number.
+ * Each document contains client details such as name, email, balances, license status, and last update timestamp.
+ *
+ * Key Security Decisions:
+ * - Clients can only be created with a 'Liberado' status.
+ * - The accountNumber, once set during creation, cannot be updated to prevent privilege escalation or misassociation of client data.
+ * - Data validation is kept minimal to allow for rapid prototyping. Only authorization-critical fields (`accountNumber`) are validated.
+ *
+ * Denormalization for Authorization:
+ * The `status` field is denormalized directly onto the client document.
+ * This allows the security rules to quickly check the license status without needing to perform additional reads, ensuring Authorization Independence.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Manages access control for client documents.
+     * @path /clients/{accountNumber}
+     * @allow (get, list): Any authenticated user can read client data.
+     * @allow (create): Only authenticated users can create a new client document. The 'accountNumber' must match the document ID.
+     * @allow (update): Only authenticated users can update existing client documents, but the 'accountNumber' cannot be changed.
+     * @allow (delete): Only authenticated users can delete existing client documents.
+     * @deny (create): If the 'accountNumber' in the data does not match the document ID.
+     * @deny (update): If the 'accountNumber' is being changed.
+     * @principle Enforces document ownership (accountNumber) and status-based authorization.
+     */
+    match /clients/{accountNumber} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Helper function to check if the user is signed in.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+  }
+}

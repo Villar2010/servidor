@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "Client": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Client",
+      "type": "object",
+      "description": "Represents a client using the MT5 platform and their license status.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the client."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the client."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the client.",
+          "format": "email"
+        },
+        "accountNumber": {
+          "type": "string",
+          "description": "The client's account number on the MT5 platform."
+        },
+        "brokerServer": {
+          "type": "string",
+          "description": "The broker server the client is connected to."
+        },
+        "balanceGross": {
+          "type": "number",
+          "description": "The gross balance of the client's MT5 account."
+        },
+        "balanceNet": {
+          "type": "number",
+          "description": "The net balance of the client's MT5 account."
+        },
+        "openTradesCount": {
+          "type": "number",
+          "description": "The number of open trades in the client's MT5 account."
+        },
+        "openTradesProfit": {
+          "type": "number",
+          "description": "The total profit from open trades in the client's MT5 account."
+        },
+        "totalInBRL": {
+          "type": "number",
+          "description": "The total balance in Brazilian Real (BRL)."
+        },
+        "status": {
+          "type": "string",
+          "description": "The authorization status of the client's license (Liberado/Bloqueado)."
+        },
+        "lastUpdate": {
+          "type": "string",
+          "description": "The timestamp of the last data update for the client.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "accountNumber",
+        "brokerServer"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/clients/{accountNumber}",
+        "definition": {
+          "entityName": "Client",
+          "schema": {
+            "$ref": "#/backend/entities/Client"
+          },
+          "description": "Stores client data, including license status (Liberado/Bloqueado), MT5 account details, and balances. Document ID is the accountNumber.",
+          "params": [
+            {
+              "name": "accountNumber",
+              "description": "The client's MT5 account number, used as the document ID."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to manage MT5 client licenses and data securely. A single `clients` collection is used, with each document representing a client, identified by their `accountNumber`. This structure directly reflects the provided code and simplifies data access and management. To ensure authorization independence (CRITICAL design principle) and support QAPs, the `status` field within each client document is crucial. The application logic validates the `status` before granting access, ensuring that only 'Liberado' clients can proceed. The `accountNumber` as document ID allows for direct access and updates to client data. This achieves Authorization Independence because the rules only need to check the document in the clients collection. Segregation of the license statuses is not required, so the DB is cleaner."
+  }
+}

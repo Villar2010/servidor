@@ -1,0 +1,35 @@
+
+[
+  {
+    "accountNumber": "980348",
+    "name": "Germano Bufane",
+    "email": "",
+    "brokerServer": "FundsCap-Trade",
+    "status": "Liberado",
+    "lastUpdate": "2024-07-01T17:51:24.037Z"
+  },
+  {
+    "accountNumber": "980586",
+    "name": "Jhonas Crei",
+    "email": "",
+    "brokerServer": "FundsCap-Trade",
+    "status": "Liberado",
+    "lastUpdate": "2024-07-01T17:51:30.347Z"
+  },
+  {
+    "accountNumber": "773641",
+    "name": "JULIO CESAR DIAS DE SOUZA",
+    "email": "",
+    "brokerServer": "MonetaMarkets-Demo",
+    "status": "Liberado",
+    "lastUpdate": "2024-06-30T13:17:34.961Z"
+  },
+  {
+    "accountNumber": "5816450",
+    "name": "Paulo Villarinho",
+    "email": "pvillarinho@gmail.com",
+    "brokerServer": "Deriv-Demo",
+    "status": "Bloqueado",
+    "lastUpdate": "2024-06-29T16:03:07.135Z"
+  }
+]
