@@ -19,7 +19,6 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-    AlertDialogTrigger,
   } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -42,7 +41,7 @@ export default function ClientTableActions({ client, onEdit, onDeleteSuccess }: 
 
   const handleDelete = async () => {
     if (!firestore) {
-      toast({ title: "Erro", description: "Firestore não inicializado.", variant: "destructive" });
+      toast({ title: "Erro", description: "Firestore não inicializado. A conexão pode estar sendo estabelecida.", variant: "destructive" });
       return;
     }
     setIsPending(true);
@@ -74,7 +73,7 @@ export default function ClientTableActions({ client, onEdit, onDeleteSuccess }: 
     <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
+          <Button variant="ghost" className="h-8 w-8 p-0" disabled={!firestore}>
             <span className="sr-only">Abrir menu</span>
             <MoreHorizontal className="h-4 w-4" />
           </Button>
@@ -107,7 +106,7 @@ export default function ClientTableActions({ client, onEdit, onDeleteSuccess }: 
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete} disabled={isPending} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+          <AlertDialogAction onClick={handleDelete} disabled={isPending || !firestore} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
             {isPending ? 'Excluindo...' : 'Excluir'}
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -115,3 +114,5 @@ export default function ClientTableActions({ client, onEdit, onDeleteSuccess }: 
     </AlertDialog>
   );
 }
+
+    

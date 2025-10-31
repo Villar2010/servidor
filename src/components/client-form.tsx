@@ -80,7 +80,7 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
 
   const onSubmit = async (values: Client) => {
     if (!firestore) {
-      toast({ title: "Erro", description: "Firestore não inicializado.", variant: "destructive" });
+      toast({ title: "Erro", description: "Firestore não inicializado. A conexão pode estar sendo estabelecida.", variant: "destructive" });
       return;
     }
     
@@ -282,7 +282,7 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
             </ScrollArea>
             <DialogFooter className="pt-6">
               <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isPending}>
+              <Button type="submit" disabled={isPending || !firestore}>
                 {isPending ? 'Salvando...' : 'Salvar Cliente'}
               </Button>
             </DialogFooter>
@@ -292,3 +292,5 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
     </Dialog>
   );
 }
+
+    
