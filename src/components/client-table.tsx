@@ -43,8 +43,6 @@ export default function ClientTable() {
 
   const clientsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Removida a ordenação por 'lastUpdate' para evitar a necessidade de um índice complexo no Firestore
-    // A ordenação será feita no lado do cliente
     return query(collection(firestore, "clients"));
   }, [firestore]);
 
@@ -67,21 +65,13 @@ export default function ClientTable() {
   const filteredClients = React.useMemo(() => {
     if (!clients) return [];
     
-    const filtered = clients.filter(client => {
+    return clients.filter(client => {
         const term = searchTerm.toLowerCase();
         return (
             client.accountNumber.toLowerCase().includes(term) ||
             (client.name && client.name.toLowerCase().includes(term)) ||
             (client.brokerServer && client.brokerServer.toLowerCase().includes(term))
         );
-    });
-
-    // Ordena os clientes no lado do cliente
-    return filtered.sort((a, b) => {
-        if (a.lastUpdate && b.lastUpdate) {
-            return new Date(b.lastUpdate).getTime() - new Date(a.lastUpdate).getTime();
-        }
-        return 0;
     });
 
   }, [clients, searchTerm]);

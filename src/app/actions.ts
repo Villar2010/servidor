@@ -1,16 +1,12 @@
 'use server';
 
-import { ValidateClientAuthorizationOutput } from '@/lib/types';
 import { redirect } from 'next/navigation';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData, defaultSession } from '@/lib/session';
 import { cookies } from 'next/headers';
 import { unstable_noStore as noStore } from 'next/cache';
-// REMOVIDO: import { initializeFirebase } from '@/firebase/server';
-// REMOVIDO: import { collection, doc, getDoc, getDocs, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 
-
-// Ações de Autenticação - Sem acesso ao banco de dados diretamente
+// Ações de Autenticação - Sem acesso direto ao banco de dados.
 const adminUser = {
   email: 'coinsnegotiate@gmail.com',
   password: 'Villarinho2010',
@@ -51,5 +47,4 @@ export const logout = async () => {
 
 // As funções getClients, runValidation, addOrUpdateClient, deleteClient, importClientsFromJson
 // foram removidas. A lógica de manipulação de dados agora reside inteiramente no lado do cliente
-// (nos componentes React), usando o SDK do cliente Firebase, que é a abordagem correta
-// para evitar o erro FIREBASE_SERVICE_ACCOUNT na Vercel.
+// (nos componentes React), usando o SDK do cliente Firebase.
