@@ -19,6 +19,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
+    AlertDialogTrigger,
   } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -114,5 +115,4 @@ export default function ClientTableActions({ client, onEdit, onDeleteSuccess }: 
     </AlertDialog>
   );
 }
-
     
