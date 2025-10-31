@@ -16,7 +16,8 @@ export const getSession = async () => {
   noStore(); // Impede o cache da sessão
   const session = await getIronSession<SessionData>(cookies(), sessionOptions);
   if (!session.isLoggedIn) {
-    session.destroy(); // Garante que sessões inválidas sejam limpas
+    // Não destrua a sessão aqui. Apenas retorne o estado padrão.
+    // A modificação de cookies só é permitida em Server Actions ou Route Handlers.
     return defaultSession;
   }
   return {
