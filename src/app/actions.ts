@@ -36,7 +36,9 @@ export const login = async (prevState: any, formData: FormData) => {
   session.isLoggedIn = true;
   session.email = email;
   await session.save();
-  redirect('/dashboard');
+
+  // Não redireciona mais aqui, o cliente fará isso após o login anônimo do Firebase
+  return { success: true };
 };
 
 export const logout = async () => {

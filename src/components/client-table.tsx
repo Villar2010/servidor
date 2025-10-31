@@ -5,7 +5,7 @@ import * as React from "react";
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { PlusCircle, Search, AlertCircle, Loader2, FileDown } from "lucide-react";
-import { Client, ClientSchema } from "@/lib/types";
+import { Client } from "@/lib/types";
 import {
   Table,
   TableBody,
@@ -28,7 +28,7 @@ import ClientTableActions from "./client-table-actions";
 import { Input } from "./ui/input";
 import { useCollection } from "@/firebase/firestore/use-collection";
 import { useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { collection, query, writeBatch, doc } from "firebase/firestore";
+import { collection, query } from "firebase/firestore";
 import { Skeleton } from "./ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +40,7 @@ export default function ClientTable() {
   
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
 
   const clientsQuery = useMemoFirebase(() => {
     // Aguarda o usuário e o firestore estarem prontos
@@ -47,8 +48,6 @@ export default function ClientTable() {
     return query(collection(firestore, "clients"));
   }, [firestore, user]);
 
-  // `isLoading` do `useCollection` reflete o carregamento da query,
-  // `isUserLoading` reflete o carregamento da autenticação.
   const { data: clients, isLoading: isCollectionLoading, error } = useCollection<Client>(clientsQuery);
   
   const handleAddClient = () => {
@@ -95,7 +94,6 @@ export default function ClientTable() {
   const filteredClients = React.useMemo(() => {
     if (!clients) return [];
     
-    // Ordena os clientes pela data de atualização (mais recente primeiro)
     const sortedClients = [...clients].sort((a, b) => {
       const dateA = a.lastUpdate ? new Date(a.lastUpdate).getTime() : 0;
       const dateB = b.lastUpdate ? new Date(b.lastUpdate).getTime() : 0;
@@ -118,10 +116,7 @@ export default function ClientTable() {
     if (value === undefined || value === null) return '-';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   }
-
-  const { toast } = useToast();
   
-  // O carregamento geral agora considera tanto a autenticação quanto a coleção
   const isLoading = isUserLoading || (user && isCollectionLoading);
 
   const renderTableContent = () => {
@@ -156,6 +151,22 @@ export default function ClientTable() {
        );
     }
     
+    if (!user) {
+       return (
+        <TableRow>
+           <TableCell
+             colSpan={8}
+             className="h-24 text-center text-muted-foreground"
+           >
+             <div className="flex flex-col items-center gap-2">
+                <Loader2 className="animate-spin text-muted-foreground" />
+                <span>Aguardando autenticação do Firebase...</span>
+              </div>
+           </TableCell>
+         </TableRow>
+       );
+    }
+
     if (!filteredClients || filteredClients.length === 0) {
       return (
          <TableRow>

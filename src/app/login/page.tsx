@@ -15,8 +15,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Loader2, LogIn } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/firebase';
+import { signInAnonymously } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 function LoginButton() {
   const { pending } = useFormStatus();
@@ -32,17 +35,47 @@ function LoginButton() {
 export default function LoginPage() {
   const [state, formAction] = useActionState(login, undefined);
   const router = useRouter();
+  const auth = useAuth();
+  const { toast } = useToast();
+  const [isFirebaseSigningIn, setIsFirebaseSigningIn] = useState(false);
 
   useEffect(() => {
     const checkSession = async () => {
       const session = await getSession();
       if (session.isLoggedIn) {
-        router.push('/dashboard');
+        // Se já tem sessão, tenta login anônimo e redireciona
+        if (auth && !auth.currentUser) {
+           signInAnonymously(auth).then(() => {
+             router.push('/dashboard');
+           }).catch((error) => {
+              console.error("Firebase anonymous sign-in error on session check:", error);
+           });
+        } else if (auth && auth.currentUser) {
+            router.push('/dashboard');
+        }
       }
     };
     checkSession();
-  }, [router]);
+  }, [router, auth]);
 
+  useEffect(() => {
+    if (state?.success && auth) {
+      setIsFirebaseSigningIn(true);
+      signInAnonymously(auth)
+        .then(() => {
+          router.push('/dashboard');
+        })
+        .catch((error) => {
+          console.error("Firebase anonymous sign-in failed:", error);
+          toast({
+            title: "Erro de Autenticação Firebase",
+            description: "Não foi possível autenticar com o Firebase. Tente novamente.",
+            variant: "destructive",
+          });
+          setIsFirebaseSigningIn(false);
+        });
+    }
+  }, [state, auth, router, toast]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -63,11 +96,12 @@ export default function LoginPage() {
                 name="email"
                 placeholder="admin@example.com"
                 required
+                disabled={isFirebaseSigningIn}
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" name="password" required />
+              <Input id="password" type="password" name="password" required disabled={isFirebaseSigningIn} />
             </div>
             {state?.error && (
               <Alert variant="destructive">
@@ -77,6 +111,7 @@ export default function LoginPage() {
               </Alert>
             )}
             <LoginButton />
+            {isFirebaseSigningIn && <p className="text-center text-sm text-muted-foreground">Autenticando com o Firebase...</p>}
           </form>
         </CardContent>
       </Card>
