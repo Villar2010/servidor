@@ -1,5 +1,5 @@
 // src/app/api/validate/route.ts
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { Client } from '@/lib/types';
@@ -16,6 +16,8 @@ function getFirebaseAdmin() {
     return { app: adminApp, db: getFirestore(adminApp) };
   }
 
+  // Se já houver apps inicializadas, reutiliza a primeira.
+  // Essencial para ambientes serverless como a Vercel.
   if (getApps().length > 0) {
     adminApp = getApp();
     return { app: adminApp, db: getFirestore(adminApp) };
@@ -89,6 +91,7 @@ async function handleValidation(request: NextRequest, isPost: boolean): Promise<
       const client = docSnap.data() as Client;
       console.log(`[${endpointType}] /api/validate - Cliente ${accountNumber} encontrado. Dados:`, client);
 
+      // Normaliza as strings para comparação robusta
       const brokerServerFromDB = client.brokerServer?.trim().toLowerCase();
       const brokerServerFromRequest = brokerServer.trim().toLowerCase();
       
