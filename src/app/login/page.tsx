@@ -1,6 +1,5 @@
 'use client';
 
-import { useFormStatus, useFormState } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -15,21 +14,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Loader2, LogIn } from 'lucide-react';
 import { useEffect, useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, getSession } from '@/firebase';
+import { useAuth } from '@/firebase';
+import { getSession } from '@/app/actions';
 import { signInAnonymously } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
-
-
-function LoginButton() {
-  const { pending } = useFormStatus();
-
-  return (
-    <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? <Loader2 className="animate-spin" /> : <LogIn />}
-      Entrar
-    </Button>
-  );
-}
 
 export default function LoginPage() {
   const router = useRouter();
