@@ -1,8 +1,9 @@
 // src/app/api/validate/route.ts
 import { initializeFirebase } from '@/firebase/server';
 import { Client } from '@/lib/types';
-import { doc, getDoc } from 'firebase-admin/firestore';
-import { NextRequest } from 'next/server';
+// A importação direta de 'firebase-admin/firestore' foi removida para evitar conflitos.
+// Usaremos o objeto 'db' do 'initializeFirebase' que já é uma instância do Firestore Admin.
+import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * Lida com requisições GET e POST para validação.
@@ -26,7 +27,6 @@ async function handleValidation(request: NextRequest, isPost: boolean): Promise<
         }
     } else {
         const { searchParams } = new URL(request.url);
-        // Acessa os parâmetros diretamente com .get() para evitar a enumeração
         accountNumber = searchParams.get('accountNumber');
         brokerServer = searchParams.get('brokerServer');
     }
@@ -40,12 +40,13 @@ async function handleValidation(request: NextRequest, isPost: boolean): Promise<
 
      // Usa o SDK Admin do Firebase (server-side)
      const { db } = await initializeFirebase();
-     const clientRef = doc(db, 'clients', accountNumber);
-     const docSnap = await getDoc(clientRef);
+     // Sintaxe correta do Admin SDK para referenciar um documento
+     const clientRef = db.doc(`clients/${accountNumber}`);
+     const docSnap = await clientRef.get();
 
      let result: { status: 'authorized' | 'blocked', reason: string };
 
-     if (docSnap.exists()) {
+     if (docSnap.exists) {
          const client = docSnap.data() as Client;
          if (client.brokerServer === brokerServer) {
              if (client.status === 'Liberado') {
