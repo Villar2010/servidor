@@ -1,10 +1,10 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData, defaultSession } from '@/lib/session';
 import { cookies } from 'next/headers';
 import { unstable_noStore as noStore } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 // Ações de Autenticação - Sem acesso direto ao banco de dados.
 const adminUser = {
