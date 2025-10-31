@@ -1,8 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
-import { login, getSession } from '@/app/actions';
+import { useFormStatus, useFormState } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -15,11 +13,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Loader2, LogIn } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/firebase';
+import { useAuth, getSession } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+
 
 function LoginButton() {
   const { pending } = useFormStatus();
@@ -33,54 +32,73 @@ function LoginButton() {
 }
 
 export default function LoginPage() {
-  const [state, formAction] = useActionState(login, undefined);
   const router = useRouter();
   const auth = useAuth();
   const { toast } = useToast();
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
 
-  useEffect(() => {
-    // Se o formulário de login do servidor foi bem-sucedido, redireciona para o dashboard.
-    // O dashboard/provider cuidará da lógica de autenticação do Firebase.
-    if (state?.success) {
-      router.push('/dashboard');
-    }
-  }, [state, router]);
-
-  // Efeito para garantir que o usuário do Firebase esteja logado se a sessão do servidor existir.
+  // Efeito para redirecionar se o usuário já estiver logado
   useEffect(() => {
     if (!auth) return;
 
     const checkSessionAndAuth = async () => {
       const session = await getSession();
-      // Se a sessão do servidor existir, mas o usuário do Firebase não, faça o login anônimo.
-      if (session.isLoggedIn && !auth.currentUser) {
+      if (session.isLoggedIn && auth.currentUser) {
+        router.push('/dashboard');
+      } else if (session.isLoggedIn && !auth.currentUser) {
+        // Tenta logar anonimamente se a sessão existe mas o user do firebase não
         try {
           await signInAnonymously(auth);
-          // Redireciona apenas se já estivermos na página de login
-          // Isso cobre o caso de um refresh na página de login quando já logado.
-          if (window.location.pathname === '/login') {
-            router.push('/dashboard');
-          }
-        } catch (error) {
-           console.error("Firebase anonymous sign-in failed:", error);
-           toast({
-             title: "Erro de Autenticação Firebase",
-             description: "Não foi possível autenticar com o Firebase. A página será recarregada.",
-             variant: "destructive",
-           });
-           // Forçar um reload pode resolver problemas de inicialização
-           setTimeout(() => window.location.reload(), 2000);
+          router.push('/dashboard');
+        } catch (authError) {
+          console.error("Firebase anonymous sign-in failed on session check:", authError);
         }
-      } else if (session.isLoggedIn && auth.currentUser) {
-        // Se ambos existem, vá para o dashboard.
-         if (window.location.pathname === '/login') {
-            router.push('/dashboard');
-         }
       }
     };
 
     checkSessionAndAuth();
-  }, [auth, router, toast]);
+  }, [auth, router]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsPending(true);
+    setError(null);
+
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    try {
+      // 1. Chamar a API de login
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Falha ao fazer login');
+      }
+
+      // 2. Se a API de login for bem-sucedida, autenticar no Firebase
+      if (auth) {
+        await signInAnonymously(auth);
+        // 3. Após autenticar no Firebase, redirecionar
+        router.push('/dashboard');
+      } else {
+        throw new Error('Serviço de autenticação do Firebase não está disponível.');
+      }
+
+    } catch (e: any) {
+      console.error("Login process failed:", e);
+      setError(e.message || 'Ocorreu um erro durante o login.');
+      setIsPending(false);
+    } 
+    // Não defina isPending como false aqui, pois o redirecionamento deve acontecer
+  };
 
 
   return (
@@ -93,7 +111,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="grid gap-4">
+          <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">E-mail</Label>
               <Input
@@ -108,14 +126,17 @@ export default function LoginPage() {
               <Label htmlFor="password">Senha</Label>
               <Input id="password" type="password" name="password" required />
             </div>
-            {state?.error && (
+            {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Erro de Login</AlertTitle>
-                <AlertDescription>{state.error}</AlertDescription>
+                <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <LoginButton />
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending ? <Loader2 className="animate-spin" /> : <LogIn />}
+              Entrar
+            </Button>
           </form>
         </CardContent>
       </Card>

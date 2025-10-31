@@ -6,42 +6,20 @@ import { cookies } from 'next/headers';
 import { unstable_noStore as noStore } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-// Ações de Autenticação - Sem acesso direto ao banco de dados.
-const adminUser = {
-  email: 'coinsnegotiate@gmail.com',
-  password: 'Villarinho2010',
-};
-
 export const getSession = async () => {
-  noStore(); // Impede o cache da sessão
+  noStore();
   const session = await getIronSession<SessionData>(cookies(), sessionOptions);
+  
   if (!session.isLoggedIn) {
-    // Não destrua a sessão aqui. Apenas retorne o estado padrão.
     // A modificação de cookies só é permitida em Server Actions ou Route Handlers.
+    // Não destrua a sessão aqui. Apenas retorne o estado padrão.
     return defaultSession;
   }
+
   return {
     isLoggedIn: session.isLoggedIn,
     email: session.email,
   };
-};
-
-export const login = async (prevState: any, formData: FormData) => {
-  noStore();
-  const session = await getIronSession<SessionData>(cookies(), sessionOptions);
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
-
-  if (adminUser.email !== email || adminUser.password !== password) {
-    return { error: 'Credenciais inválidas.' };
-  }
-
-  session.isLoggedIn = true;
-  session.email = email;
-  await session.save();
-
-  // Apenas retorna o sucesso. O cliente fará o redirecionamento.
-  return { success: true };
 };
 
 export const logout = async () => {
@@ -49,7 +27,3 @@ export const logout = async () => {
   session.destroy();
   redirect('/login');
 };
-
-// As funções getClients, runValidation, addOrUpdateClient, deleteClient, importClientsFromJson
-// foram removidas. A lógica de manipulação de dados agora reside inteiramente no lado do cliente
-// (nos componentes React), usando o SDK do cliente Firebase.
