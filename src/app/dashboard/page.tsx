@@ -1,14 +1,31 @@
-import { getSession } from '@/app/actions';
+'use client';
+
 import ClientTable from '@/components/client-table';
 import LogoutButton from '@/components/logout-button';
-import { redirect } from 'next/navigation';
+import { useUser } from '@/firebase';
+import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-// A busca de dados agora é feita no lado do cliente dentro do ClientTable
-export default async function DashboardPage() {
-  const session = await getSession();
+export default function DashboardPage() {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
 
-  if (!session.isLoggedIn) {
-    redirect('/login');
+  useEffect(() => {
+    // Se o carregamento terminou e não há usuário, redireciona para o login.
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  // Exibe um loader enquanto a autenticação está sendo verificada
+  if (isUserLoading || !user) {
+    return (
+      <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Verificando autenticação...</p>
+      </div>
+    );
   }
 
   return (
@@ -21,7 +38,6 @@ export default async function DashboardPage() {
       </header>
       <main className="flex-1 p-4 sm:px-6 sm:py-0 md:gap-8">
         <div className="grid auto-rows-max items-start gap-4 md:gap-8">
-          {/* ClientTable agora busca e gerencia seus próprios dados no lado do cliente */}
           <ClientTable />
         </div>
       </main>

@@ -12,16 +12,29 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Loader2, LogIn } from 'lucide-react';
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/firebase';
-import { signInAnonymously } from 'firebase/auth';
+import { useAuth, useUser } from '@/firebase';
+import { signInWithEmailAndPassword, AuthErrorCodes } from 'firebase/auth';
+
+const adminUser = {
+  email: 'coinsnegotiate@gmail.com',
+  password: 'Villarinho2010',
+};
 
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
+  const { user, isUserLoading } = useUser();
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+
+  // Redireciona se o usuário já estiver logado
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, isUserLoading, router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -31,39 +44,44 @@ export default function LoginPage() {
     const formData = new FormData(event.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
+    
+    // Validação local simples (pode ser removida se o login for apenas via Firebase)
+    if (adminUser.email !== email) {
+        setError('Credenciais inválidas.');
+        setIsPending(false);
+        return;
+    }
 
     try {
-      // 1. Chamar a API de login para criar a sessão do servidor e esperar pela resposta.
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Falha ao fazer login');
-      }
-
-      // 2. Se a API de login for bem-sucedida, autenticar anonimamente no Firebase e esperar pela conclusão.
       if (!auth) {
         throw new Error('Serviço de autenticação do Firebase não está disponível.');
       }
       
-      await signInAnonymously(auth);
+      await signInWithEmailAndPassword(auth, email, password);
       
-      // 3. APENAS APÓS ambas as autenticações (sessão e Firebase) serem bem-sucedidas, redirecionar para o dashboard.
-      router.push('/dashboard');
-      // O `push` é suficiente. Se houver problemas de cache, o `replace` é uma alternativa.
+      // O useEffect cuidará do redirecionamento
+      // router.push('/dashboard');
 
     } catch (e: any) {
-      console.error("Login process failed:", e);
-      setError(e.message || 'Ocorreu um erro durante o login.');
-      setIsPending(false); // Apenas definir como false em caso de erro.
-    } 
+      console.error("Firebase Login process failed:", e);
+      if (e.code === AuthErrorCodes.INVALID_LOGIN_CREDENTIALS || e.code === "auth/wrong-password" || e.code === "auth/user-not-found" || e.code === 'auth/invalid-credential') {
+        setError("Credenciais inválidas. Verifique seu e-mail e senha.");
+      } else {
+        setError(e.message || 'Ocorreu um erro durante o login.');
+      }
+    } finally {
+        setIsPending(false);
+    }
   };
-
+  
+  // Exibe um loader enquanto verifica o estado do usuário ou se o usuário já existe
+  if (isUserLoading || user) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background px-4">
+             <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </div>
+      )
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -84,11 +102,12 @@ export default function LoginPage() {
                 name="email"
                 placeholder="admin@example.com"
                 required
+                defaultValue={adminUser.email}
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" name="password" required />
+              <Input id="password" type="password" name="password" required defaultValue={adminUser.password} />
             </div>
             {error && (
               <Alert variant="destructive">
