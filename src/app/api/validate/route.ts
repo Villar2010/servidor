@@ -1,15 +1,14 @@
 // src/app/api/validate/route.ts
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, getApp, cert, App } from 'firebase-admin/app';
-import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { getFirestore } from 'firebase-admin/firestore';
 import { Client } from '@/lib/types';
 
-// Guarda a instância inicializada para reutilização entre chamadas (em ambientes não-serverless)
+// Guarda a instância inicializada para reutilização
 let adminApp: App;
 
 /**
  * Inicializa o Firebase Admin SDK de forma idempotente e robusta.
- * Garante que a app só seja inicializada uma vez.
  */
 function initializeAdminApp() {
     if (getApps().length) {
@@ -18,16 +17,18 @@ function initializeAdminApp() {
 
     const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!serviceAccountString) {
+        console.error('[API /validate] Erro: A variável de ambiente FIREBASE_SERVICE_ACCOUNT não está definida.');
         throw new Error('A variável de ambiente FIREBASE_SERVICE_ACCOUNT não está definida.');
     }
 
     try {
         const serviceAccount = JSON.parse(Buffer.from(serviceAccountString, 'base64').toString('utf8'));
+        console.log('[API /validate] Inicializando uma nova instância do Firebase Admin SDK.');
         return initializeApp({
             credential: cert(serviceAccount),
         });
     } catch (e) {
-        console.error('Falha ao analisar FIREBASE_SERVICE_ACCOUNT ou inicializar Firebase Admin SDK:', e);
+        console.error('[API /validate] Falha ao analisar FIREBASE_SERVICE_ACCOUNT ou inicializar Firebase Admin SDK:', e);
         throw new Error('Não foi possível inicializar o Firebase Admin SDK.');
     }
 }
@@ -35,19 +36,18 @@ function initializeAdminApp() {
 /**
  * Lida com requisições GET para validação de clientes.
  */
-export async function GET(request: NextRequest): Promise<Response> {
-    const endpointType = 'GET';
-    console.log(`[${endpointType}] /api/validate - Recebida requisição.`);
+export async function GET(request: NextRequest): Promise<NextResponse> {
+    console.log(`[GET] /api/validate - Recebida requisição.`);
 
     try {
         const { searchParams } = new URL(request.url);
         const accountNumber = searchParams.get('accountNumber');
         const brokerServer = searchParams.get('brokerServer');
 
-        console.log(`[${endpointType}] /api/validate - Parâmetros: accountNumber=${accountNumber}, brokerServer=${brokerServer}`);
+        console.log(`[GET] /api/validate - Parâmetros: accountNumber=${accountNumber}, brokerServer=${brokerServer}`);
 
         if (!accountNumber || !brokerServer) {
-            console.warn(`[${endpointType}] /api/validate - Parâmetros obrigatórios ausentes.`);
+            console.warn(`[GET] /api/validate - Parâmetros obrigatórios ausentes.`);
             return new Response('Error: Os parâmetros accountNumber e brokerServer são obrigatórios.', {
                 status: 400,
                 headers: { 'Content-Type': 'text/plain; charset=utf-8' },
@@ -66,13 +66,13 @@ export async function GET(request: NextRequest): Promise<Response> {
 
         if (docSnap.exists) {
             const client = docSnap.data() as Client;
-            console.log(`[${endpointType}] /api/validate - Cliente ${accountNumber} encontrado. Dados:`, client);
+            console.log(`[GET] /api/validate - Cliente ${accountNumber} encontrado. Dados:`, client);
 
             // Normaliza as strings para comparação robusta
-            const brokerServerFromDB = client.brokerServer?.trim().toLowerCase();
+            const brokerServerFromDB = client.brokerServer?.trim().toLowerCase() ?? '';
             const brokerServerFromRequest = brokerServer.trim().toLowerCase();
             
-            console.log(`[${endpointType}] /api/validate - Comparando servidores: DB='${brokerServerFromDB}' vs Request='${brokerServerFromRequest}'`);
+            console.log(`[GET] /api/validate - Comparando servidores: DB='${brokerServerFromDB}' vs Request='${brokerServerFromRequest}'`);
             
             if (client.status === 'Liberado') {
                 if (brokerServerFromDB === brokerServerFromRequest) {
@@ -91,14 +91,15 @@ export async function GET(request: NextRequest): Promise<Response> {
             reason = 'Cliente não encontrado na base de dados.';
         }
 
-        console.log(`[${endpointType}] /api/validate - Resultado para ${accountNumber}: ${resultText}. Motivo: ${reason}`);
+        console.log(`[GET] /api/validate - Resultado para ${accountNumber}: ${resultText}. Motivo: ${reason}`);
+        // Retorna o texto simples para manter a compatibilidade com o sistema externo.
         return new Response(resultText, {
             status: 200,
             headers: { 'Content-Type': 'text/plain; charset=utf-8' },
         });
 
     } catch (error) {
-        console.error(`[${endpointType}] /api/validate - Erro interno do servidor:`, error);
+        console.error(`[GET] /api/validate - Erro interno do servidor:`, error);
         // Em caso de erro, retorna 'Bloqueado' por segurança
         return new Response('Bloqueado', {
             status: 500,
@@ -109,8 +110,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
 // O método POST é mantido para compatibilidade, mas o GET é o padrão para este tipo de validação.
 export async function POST(request: NextRequest): Promise<Response> {
-    const endpointType = 'POST';
-    console.log(`[${endpointType}] /api/validate - Recebida requisição POST, redirecionando para lógica GET.`);
+    console.log(`[POST] /api/validate - Recebida requisição POST, redirecionando para lógica GET.`);
     
     // Extrai dados do corpo e constrói uma URL com searchParams para reutilizar a lógica GET
     try {
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         return GET(simulatedRequest);
 
     } catch (e) {
-        console.error(`[${endpointType}] /api/validate - Erro ao analisar corpo da requisição:`, e);
+        console.error(`[POST] /api/validate - Erro ao analisar corpo da requisição:`, e);
         return new Response('Error: Corpo da requisição POST inválido ou ausente.', {
             status: 400,
             headers: { 'Content-Type': 'text/plain; charset=utf-8' },
