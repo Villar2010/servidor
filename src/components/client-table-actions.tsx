@@ -47,7 +47,7 @@ export default function ClientTableActions({ client, onEdit, onDeleteSuccess }: 
     }
     setIsPending(true);
     try {
-      const clientRef = doc(firestore, 'clientes', client.accountNumber);
+      const clientRef = doc(firestore, 'clients', client.accountNumber);
       await deleteDoc(clientRef);
       
       toast({

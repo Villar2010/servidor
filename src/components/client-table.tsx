@@ -45,7 +45,7 @@ export default function ClientTable() {
   const clientsQuery = useMemoFirebase(() => {
     // Aguarda o usuário e o firestore estarem prontos
     if (!firestore || !user) return null;
-    return query(collection(firestore, "clientes"));
+    return query(collection(firestore, "clients"));
   }, [firestore, user]);
 
   const { data: clients, isLoading: isCollectionLoading, error } = useCollection<Client>(clientsQuery);
@@ -79,7 +79,7 @@ export default function ClientTable() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "clientes.json";
+    a.download = "clients.json";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -87,7 +87,7 @@ export default function ClientTable() {
 
     toast({
       title: "Exportação Concluída",
-      description: `${filteredClients.length} clientes foram exportados para clientes.json`,
+      description: `${filteredClients.length} clientes foram exportados para clients.json`,
     });
   };
 
@@ -239,7 +239,7 @@ export default function ClientTable() {
                 <FileDown className="mr-2 h-4 w-4" />
                 Exportar JSON
               </Button>
-              <Button onClick={handleAddClient} className="w-full sm:w-auto">
+              <Button onClick={handleAddClient} className="w-full smw-auto">
                 <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Cliente
               </Button>
             </div>

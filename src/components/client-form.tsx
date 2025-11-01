@@ -88,7 +88,7 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
     
     try {
       const validatedData = ClientSchema.parse(values);
-      const clientRef = doc(firestore, 'clientes', validatedData.accountNumber);
+      const clientRef = doc(firestore, 'clients', validatedData.accountNumber);
       
       const dataToSave = {
         ...validatedData,
