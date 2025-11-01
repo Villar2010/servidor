@@ -73,7 +73,7 @@
   "firestore": {
     "structure": [
       {
-        "path": "/clients/{accountNumber}",
+        "path": "/clientes/{accountNumber}",
         "definition": {
           "entityName": "Client",
           "schema": {
@@ -89,6 +89,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to manage MT5 client licenses and data securely. A single `clients` collection is used, with each document representing a client, identified by their `accountNumber`. This structure directly reflects the provided code and simplifies data access and management. To ensure authorization independence (CRITICAL design principle) and support QAPs, the `status` field within each client document is crucial. The application logic validates the `status` before granting access, ensuring that only 'Liberado' clients can proceed. The `accountNumber` as document ID allows for direct access and updates to client data. This achieves Authorization Independence because the rules only need to check the document in the clients collection. Segregation of the license statuses is not required, so the DB is cleaner."
+    "reasoning": "The Firestore structure is designed to manage MT5 client licenses and data securely. A single `clientes` collection is used, with each document representing a client, identified by their `accountNumber`. This structure directly reflects the provided code and simplifies data access and management. To ensure authorization independence (CRITICAL design principle) and support QAPs, the `status` field within each client document is crucial. The application logic validates the `status` before granting access, ensuring that only 'Liberado' clients can proceed. The `accountNumber` as document ID allows for direct access and updates to client data. This achieves Authorization Independence because the rules only need to check the document in the clientes collection. Segregation of the license statuses is not required, so the DB is cleaner."
   }
 }

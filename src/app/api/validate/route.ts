@@ -58,7 +58,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         adminApp = initializeAdminApp();
         const db = getFirestore(adminApp);
 
-        const clientRef = db.collection('clients').doc(accountNumber);
+        const clientRef = db.collection('clientes').doc(accountNumber);
         const docSnap = await clientRef.get();
 
         let resultText: 'Liberado' | 'Bloqueado';

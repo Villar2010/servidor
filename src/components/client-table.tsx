@@ -45,7 +45,7 @@ export default function ClientTable() {
   const clientsQuery = useMemoFirebase(() => {
     // Aguarda o usuário e o firestore estarem prontos
     if (!firestore || !user) return null;
-    return query(collection(firestore, "clients"));
+    return query(collection(firestore, "clientes"));
   }, [firestore, user]);
 
   const { data: clients, isLoading: isCollectionLoading, error } = useCollection<Client>(clientsQuery);

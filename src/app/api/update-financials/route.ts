@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     adminApp = initializeAdminApp();
     const db = getFirestore(adminApp);
     
-    const clientRef = db.collection('clients').doc(financialData.accountNumber);
+    const clientRef = db.collection('clientes').doc(financialData.accountNumber);
 
     const docSnap = await clientRef.get();
 

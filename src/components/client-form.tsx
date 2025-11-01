@@ -88,7 +88,7 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
     
     try {
       const validatedData = ClientSchema.parse(values);
-      const clientRef = doc(firestore, 'clients', validatedData.accountNumber);
+      const clientRef = doc(firestore, 'clientes', validatedData.accountNumber);
       
       const dataToSave = {
         ...validatedData,
@@ -129,66 +129,66 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <ScrollArea className="h-[60vh] pr-6">
-                <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="accountNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Número da Conta</FormLabel>
-                      <FormControl>
-                        <Input placeholder="12345678" {...field} disabled={!!client} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="brokerServer"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Servidor da Corretora</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Corretora-Live01" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="accountNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Número da Conta</FormLabel>
+                        <FormControl>
+                          <Input placeholder="12345678" {...field} disabled={!!client} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="brokerServer"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Servidor da Corretora</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Corretora-Live01" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome do Cliente</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Doe" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="john.doe@example.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome do Cliente</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="john.doe@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-               <FormField
+                <FormField
                   control={form.control}
                   name="status"
                   render={({ field }) => (
@@ -209,76 +209,76 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
                     </FormItem>
                   )}
                 />
-            
-              <h3 className="text-lg font-medium pt-4">Finanças (Opcional)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <FormField
-                  control={form.control}
-                  name="balanceGross"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Saldo Bruto</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="10000.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="balanceNet"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Saldo Líquido</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="9500.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="openTradesCount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Negociações Abertas</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="5" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="openTradesProfit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Lucro de Negociações Abertas</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="500.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                  control={form.control}
-                  name="totalInBRL"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Total (BRL)</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="50000.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              
+                <h3 className="text-lg font-medium pt-4">Finanças (Opcional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="balanceGross"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Saldo Bruto</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="10000.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="balanceNet"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Saldo Líquido</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="9500.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="openTradesCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Negociações Abertas</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="5" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="openTradesProfit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Lucro de Negociações Abertas</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="500.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="totalInBRL"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Total (BRL)</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="50000.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
-            </div>
             </ScrollArea>
             <DialogFooter className="pt-6">
               <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancelar</Button>
