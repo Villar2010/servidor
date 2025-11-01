@@ -26,16 +26,13 @@ service cloud.firestore {
     /**
      * @description Manages access control for client documents.
      * @path /clients/{accountNumber}
-     * @allow (get, list): Any authenticated user can read client data.
-     * @allow (create): Only authenticated users can create a new client document. The 'accountNumber' must match the document ID.
-     * @allow (update): Only authenticated users can update existing client documents, but the 'accountNumber' cannot be changed.
-     * @allow (delete): Only authenticated users can delete existing client documents.
-     * @deny (create): If the 'accountNumber' in the data does not match the document ID.
-     * @deny (update): If the 'accountNumber' is being changed.
+     * @allow (get, create, update, delete): Any authenticated user can access individual client documents.
+     * @allow (list): Any authenticated user can list all clients to populate the dashboard.
      * @principle Enforces document ownership (accountNumber) and status-based authorization.
      */
     match /clients/{accountNumber} {
-      allow read, write: if isSignedIn();
+      allow get, create, update, delete: if isSignedIn();
+      allow list: if isSignedIn();
     }
 
     // Helper function to check if the user is signed in.
