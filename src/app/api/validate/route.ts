@@ -29,8 +29,10 @@ export async function GET(request: NextRequest) {
     'Content-Type': 'text/plain',
   };
 
+  console.log(`[VALIDATION START] Received request for Account: ${accountNumber}, Server: ${brokerServer}`);
+
   if (!accountNumber || !brokerServer) {
-    console.log("Parâmetros ausentes:", { accountNumber, brokerServer });
+    console.log("[VALIDATION FAIL] Missing parameters:", { accountNumber, brokerServer });
     return new NextResponse("Bloqueado", { status: 400, headers });
   }
 
@@ -42,27 +44,37 @@ export async function GET(request: NextRequest) {
 
     if (docSnap.exists) {
       const client = docSnap.data();
+      console.log(`[VALIDATION INFO] Found document for ${accountNumber}:`, client);
       
       if (client) {
-        const brokerServerFromDB = client.brokerServer?.trim().toLowerCase() || '';
+        const brokerServerFromDB = client.brokerServer || '';
+        const statusFromDB = client.status || 'Bloqueado';
+
+        const normalizedBrokerServerFromDB = brokerServerFromDB.trim().toLowerCase();
         const normalizedBrokerServerFromRequest = String(brokerServer).trim().toLowerCase();
 
+        console.log(`[VALIDATION COMPARE] Status from DB: '${statusFromDB}'`);
+        console.log(`[VALIDATION COMPARE] Broker from DB (raw): '${brokerServerFromDB}' -> (normalized): '${normalizedBrokerServerFromDB}'`);
+        console.log(`[VALIDATION COMPARE] Broker from Request (raw): '${brokerServer}' -> (normalized): '${normalizedBrokerServerFromRequest}'`);
+        
         // Compara o status e os servidores normalizados
-        if (client.status === 'Liberado' && brokerServerFromDB === normalizedBrokerServerFromRequest) {
+        if (statusFromDB === 'Liberado' && normalizedBrokerServerFromDB === normalizedBrokerServerFromRequest) {
           resultText = 'Liberado';
+          console.log(`[VALIDATION SUCCESS] Match for ${accountNumber}. Status: Liberado.`);
         } else {
-             console.log(`Validação falhou para ${accountNumber}. Status: ${client.status}, DB Server: '${brokerServerFromDB}', Req Server: '${normalizedBrokerServerFromRequest}'`);
+             console.log(`[VALIDATION FAIL] No match for ${accountNumber}. Status check: ${statusFromDB === 'Liberado'}. Server check: ${normalizedBrokerServerFromDB === normalizedBrokerServerFromRequest}.`);
         }
       }
     } else {
-      console.log(`Cliente não encontrado com o accountNumber: ${accountNumber}`);
+      console.log(`[VALIDATION FAIL] Client not found with accountNumber: ${accountNumber}`);
     }
     
     // Retorna o resultado como texto simples
+    console.log(`[VALIDATION END] Final result for ${accountNumber}: ${resultText}`);
     return new NextResponse(resultText, { status: 200, headers });
 
   } catch (error) {
-    console.error(`Erro na validação para accountNumber ${accountNumber}:`, error);
+    console.error(`[VALIDATION ERROR] Error during validation for accountNumber ${accountNumber}:`, error);
     // Em caso de erro interno no servidor, retorna 'Bloqueado' por segurança
     return new NextResponse("Bloqueado", { status: 500, headers });
   }
