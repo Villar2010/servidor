@@ -50,32 +50,38 @@ export async function GET(request: NextRequest) {
         const brokerServerFromDB = client.brokerServer || '';
         const statusFromDB = client.status || 'Bloqueado';
 
-        const normalizedBrokerServerFromDB = brokerServerFromDB.trim().toLowerCase();
-        const normalizedBrokerServerFromRequest = String(brokerServer).trim().toLowerCase();
+        const normalizedBrokerServerFromDB = brokerServerFromDB.trim();
+        const normalizedBrokerServerFromRequest = String(brokerServer).trim();
 
         console.log(`[VALIDATION COMPARE] Status from DB: '${statusFromDB}'`);
-        console.log(`[VALIDATION COMPARE] Broker from DB (raw): '${brokerServerFromDB}' -> (normalized): '${normalizedBrokerServerFromDB}'`);
-        console.log(`[VALIDATION COMPARE] Broker from Request (raw): '${brokerServer}' -> (normalized): '${normalizedBrokerServerFromRequest}'`);
+        console.log(`[VALIDATION COMPARE] Broker from DB (normalized): '${normalizedBrokerServerFromDB}'`);
+        console.log(`[VALIDATION COMPARE] Broker from Request (normalized): '${normalizedBrokerServerFromRequest}'`);
         
-        // Compara o status e os servidores normalizados
-        if (statusFromDB === 'Liberado' && normalizedBrokerServerFromDB === normalizedBrokerServerFromRequest) {
+        // Comparação robusta de strings que ignora maiúsculas/minúsculas e caracteres variantes.
+        const areServersEqual = normalizedBrokerServerFromDB.localeCompare(
+            normalizedBrokerServerFromRequest,
+            undefined, // Usa a localidade padrão
+            { sensitivity: 'base', ignorePunctuation: true }
+        ) === 0;
+        
+        console.log(`[VALIDATION CHECK] Are servers equal (robust compare): ${areServersEqual}`);
+
+        if (statusFromDB === 'Liberado' && areServersEqual) {
           resultText = 'Liberado';
           console.log(`[VALIDATION SUCCESS] Match for ${accountNumber}. Status: Liberado.`);
         } else {
-             console.log(`[VALIDATION FAIL] No match for ${accountNumber}. Status check: ${statusFromDB === 'Liberado'}. Server check: ${normalizedBrokerServerFromDB === normalizedBrokerServerFromRequest}.`);
+             console.log(`[VALIDATION FAIL] No match for ${accountNumber}. Status check: ${statusFromDB === 'Liberado'}. Server check: ${areServersEqual}.`);
         }
       }
     } else {
       console.log(`[VALIDATION FAIL] Client not found with accountNumber: ${accountNumber}`);
     }
     
-    // Retorna o resultado como texto simples
     console.log(`[VALIDATION END] Final result for ${accountNumber}: ${resultText}`);
     return new NextResponse(resultText, { status: 200, headers });
 
   } catch (error) {
     console.error(`[VALIDATION ERROR] Error during validation for accountNumber ${accountNumber}:`, error);
-    // Em caso de erro interno no servidor, retorna 'Bloqueado' por segurança
     return new NextResponse("Bloqueado", { status: 500, headers });
   }
 }
