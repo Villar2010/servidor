@@ -6,9 +6,6 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "frameworksBackend": {
-      "region": "us-west1"
-    },
     "rewrites": [
       {
         "source": "/api/validate",
