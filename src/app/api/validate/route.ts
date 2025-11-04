@@ -12,12 +12,13 @@ let adminApp: App;
  */
 function initializeAdminApp() {
     if (getApps().length) {
+        console.log('[API /validate] Reutilizando instância existente do Firebase Admin SDK.');
         return getApp();
     }
 
     const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!serviceAccountString) {
-        console.error('[API /validate] Erro: A variável de ambiente FIREBASE_SERVICE_ACCOUNT não está definida.');
+        console.error('[API /validate] ERRO CRÍTICO: A variável de ambiente FIREBASE_SERVICE_ACCOUNT não está definida.');
         throw new Error('A variável de ambiente FIREBASE_SERVICE_ACCOUNT não está definida.');
     }
 
@@ -37,18 +38,19 @@ function initializeAdminApp() {
  * Lida com requisições GET para validação de clientes.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
-    console.log(`[GET] /api/validate - Recebida requisição.`);
+    console.log(`[INÍCIO] [GET] /api/validate - Recebida requisição.`);
 
     try {
         const { searchParams } = new URL(request.url);
         const accountNumber = searchParams.get('accountNumber');
-        const brokerServer = searchParams.get('brokerServer');
+        const brokerServerFromRequest = searchParams.get('brokerServer');
 
-        console.log(`[GET] /api/validate - Parâmetros: accountNumber=${accountNumber}, brokerServer=${brokerServer}`);
+        console.log(`[PARAMETROS] accountNumber=${accountNumber}, brokerServer=${brokerServerFromRequest}`);
 
-        if (!accountNumber || !brokerServer) {
-            console.warn(`[GET] /api/validate - Parâmetros obrigatórios ausentes.`);
-            return new Response('Error: Os parâmetros accountNumber e brokerServer são obrigatórios.', {
+        if (!accountNumber || !brokerServerFromRequest) {
+            console.warn(`[AVISO] Parâmetros obrigatórios ausentes. Retornando 'Bloqueado'.`);
+            // Retorna texto simples para manter a compatibilidade com o sistema externo.
+            return new NextResponse('Bloqueado', {
                 status: 400,
                 headers: { 'Content-Type': 'text/plain; charset=utf-8' },
             });
@@ -58,6 +60,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         adminApp = initializeAdminApp();
         const db = getFirestore(adminApp);
 
+        console.log(`[FIRESTORE] A procurar na coleção 'clients' pelo documento com ID: ${accountNumber}`);
         const clientRef = db.collection('clients').doc(accountNumber);
         const docSnap = await clientRef.get();
 
@@ -66,21 +69,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
         if (docSnap.exists) {
             const client = docSnap.data() as Client;
-            console.log(`[GET] /api/validate - Cliente ${accountNumber} encontrado. Dados:`, client);
+            console.log(`[DADOS] Cliente ${accountNumber} encontrado. Dados do DB:`, client);
 
-            // Normaliza as strings para comparação robusta
+            // Normalização robusta para comparação
             const brokerServerFromDB = client.brokerServer?.trim().toLowerCase() ?? '';
-            const brokerServerFromRequest = brokerServer.trim().toLowerCase();
+            const normalizedBrokerServerFromRequest = brokerServerFromRequest.trim().toLowerCase();
             
-            console.log(`[GET] /api/validate - Comparando servidores: DB='${brokerServerFromDB}' vs Request='${brokerServerFromRequest}'`);
+            console.log(`[COMPARAÇÃO] Servidor DB (normalizado): '${brokerServerFromDB}'`);
+            console.log(`[COMPARAÇÃO] Servidor Request (normalizado): '${normalizedBrokerServerFromRequest}'`);
             
             if (client.status === 'Liberado') {
-                if (brokerServerFromDB === brokerServerFromRequest) {
+                if (brokerServerFromDB === normalizedBrokerServerFromRequest) {
                     resultText = 'Liberado';
-                    reason = 'Cliente encontrado, com status liberado e servidor correspondente.';
+                    reason = 'Cliente encontrado, status Liberado e servidor correspondente.';
                 } else {
                     resultText = 'Bloqueado';
-                    reason = 'O servidor da corretora não corresponde ao registrado.';
+                    reason = 'O servidor da corretora não corresponde ao registado.';
                 }
             } else {
                 resultText = 'Bloqueado';
@@ -91,17 +95,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             reason = 'Cliente não encontrado na base de dados.';
         }
 
-        console.log(`[GET] /api/validate - Resultado para ${accountNumber}: ${resultText}. Motivo: ${reason}`);
+        console.log(`[FIM] Resultado para ${accountNumber}: ${resultText}. Motivo: ${reason}`);
         // Retorna o texto simples para manter a compatibilidade com o sistema externo.
-        return new Response(resultText, {
+        return new NextResponse(resultText, {
             status: 200,
             headers: { 'Content-Type': 'text/plain; charset=utf-8' },
         });
 
     } catch (error) {
-        console.error(`[GET] /api/validate - Erro interno do servidor:`, error);
+        console.error(`[ERRO INTERNO] Erro interno do servidor:`, error);
         // Em caso de erro, retorna 'Bloqueado' por segurança
-        return new Response('Bloqueado', {
+        return new NextResponse('Bloqueado', {
             status: 500,
             headers: { 'Content-Type': 'text/plain; charset=utf-8' },
         });
@@ -110,15 +114,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 // O método POST é mantido para compatibilidade, mas o GET é o padrão para este tipo de validação.
 export async function POST(request: NextRequest): Promise<Response> {
-    console.log(`[POST] /api/validate - Recebida requisição POST, redirecionando para lógica GET.`);
+    console.log(`[INÍCIO] [POST] /api/validate - Recebida requisição POST.`);
     
     // Extrai dados do corpo e constrói uma URL com searchParams para reutilizar a lógica GET
     try {
         const body = await request.json();
         const { accountNumber, brokerServer } = body;
+        console.log(`[POST-PARAMETROS] accountNumber=${accountNumber}, brokerServer=${brokerServer}`);
 
         if (!accountNumber || !brokerServer) {
-            return new Response('Error: Corpo da requisição POST deve conter accountNumber e brokerServer.', {
+            console.warn(`[POST-AVISO] Corpo da requisição POST deve conter accountNumber e brokerServer. Retornando 'Bloqueado'.`);
+            return new NextResponse('Bloqueado', {
                 status: 400,
                 headers: { 'Content-Type': 'text/plain; charset=utf-8' },
             });
@@ -126,16 +132,17 @@ export async function POST(request: NextRequest): Promise<Response> {
         
         // Simula uma requisição GET para reutilizar a lógica principal
         const simulatedUrl = new URL(request.url);
-        simulatedUrl.searchParams.set('accountNumber', accountNumber);
-        simulatedUrl.searchParams.set('brokerServer', brokerServer);
+        simulatedUrl.searchParams.set('accountNumber', String(accountNumber));
+        simulatedUrl.searchParams.set('brokerServer', String(brokerServer));
 
         const simulatedRequest = new NextRequest(simulatedUrl, request);
 
+        console.log('[POST] A redirecionar para a lógica GET...');
         return GET(simulatedRequest);
 
     } catch (e) {
-        console.error(`[POST] /api/validate - Erro ao analisar corpo da requisição:`, e);
-        return new Response('Error: Corpo da requisição POST inválido ou ausente.', {
+        console.error(`[POST-ERRO] Erro ao analisar corpo da requisição:`, e);
+        return new NextResponse('Bloqueado', {
             status: 400,
             headers: { 'Content-Type': 'text/plain; charset=utf-8' },
         });
