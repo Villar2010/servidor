@@ -1,11 +1,14 @@
 {
   "hosting": {
-    "public": "public",
+    "source": ".",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
+    "frameworksBackend": {
+      "region": "us-west1"
+    },
     "rewrites": [
       {
         "source": "/api/validate",
@@ -13,7 +16,10 @@
       },
       {
         "source": "**",
-        "destination": "/index.html"
+        "run": {
+          "serviceId": "nextn",
+          "region": "us-west1"
+        }
       }
     ]
   }
