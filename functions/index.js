@@ -10,8 +10,8 @@ const db = admin.firestore();
 
 /**
  * Cloud Function para validar a licença de um cliente MT5.
- * Endpoint: /validateClient
- * @param {functions.https.Request} req - O objeto de requisição, esperando 'accountNumber' e 'brokerServer' nos query params.
+ * Endpoint: /api/validate (via rewrite no firebase.json)
+ * @param {functions.https.Request} req - O objeto de requisição.
  * @param {functions.Response} res - O objeto de resposta.
  */
 exports.validateClient = functions.https.onRequest(async (req, res) => {
@@ -26,11 +26,12 @@ exports.validateClient = functions.https.onRequest(async (req, res) => {
     return;
   }
   
-  // A lógica principal é agora acionada por GET ou POST
+  // Extrai os parâmetros tanto de query (GET) como de body (POST)
   const { accountNumber, brokerServer } = req.method === 'POST' ? req.body : req.query;
 
   if (!accountNumber || !brokerServer) {
     console.log("Parâmetros ausentes:", { accountNumber, brokerServer });
+    // Retorna texto simples para compatibilidade com MT5
     return res.status(400).send("Bloqueado");
   }
 
@@ -38,7 +39,7 @@ exports.validateClient = functions.https.onRequest(async (req, res) => {
     const clientRef = db.collection("clients").doc(String(accountNumber));
     const docSnap = await clientRef.get();
 
-    let resultText = 'Bloqueado';
+    let resultText = 'Bloqueado'; // Padrão de segurança
 
     if (docSnap.exists) {
       const client = docSnap.data();
@@ -46,19 +47,21 @@ exports.validateClient = functions.https.onRequest(async (req, res) => {
       const brokerServerFromDB = client.brokerServer?.trim().toLowerCase() || '';
       const normalizedBrokerServerFromRequest = String(brokerServer).trim().toLowerCase();
 
+      // Compara o status e os servidores normalizados
       if (client.status === 'Liberado' && brokerServerFromDB === normalizedBrokerServerFromRequest) {
         resultText = 'Liberado';
       }
     } else {
-        console.log(`Cliente não encontrado: ${accountNumber}`);
+        // Log se o cliente não for encontrado no banco de dados
+        console.log(`Cliente não encontrado com o accountNumber: ${accountNumber}`);
     }
     
-    // Retorna texto simples para compatibilidade com o sistema MT5
+    // Retorna o resultado como texto simples
     res.status(200).send(resultText);
 
   } catch (error) {
-    console.error("Erro na validação:", error);
-    // Retorna 'Bloqueado' por segurança em caso de erro interno
+    console.error(`Erro na validação para accountNumber ${accountNumber}:`, error);
+    // Em caso de erro interno no servidor, retorna 'Bloqueado' por segurança
     res.status(500).send("Bloqueado");
   }
 });
