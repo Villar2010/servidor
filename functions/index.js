@@ -1,17 +1,20 @@
+
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const express = require("express");
 const cors = require("cors");
 
+// A inicialização do admin SDK deve acontecer apenas uma vez.
 admin.initializeApp();
-
 const db = admin.firestore();
+
 const app = express();
 
-// Automatically allow cross-origin requests
+// Aplica o middleware CORS a todas as rotas
 app.use(cors({ origin: true }));
 
-app.get("/validate", async (req, res) => {
+// A rota agora corresponde ao caminho completo que a função recebe do Firebase Hosting
+app.get("/api/validate", async (req, res) => {
   try {
     const { accountNumber, brokerServer } = req.query;
 
@@ -27,10 +30,11 @@ app.get("/validate", async (req, res) => {
       `[VALIDATION START] Received request for Account: ${accountNumber}, Server: ${brokerServer}`
     );
 
+    // Usa a coleção "clients" como está na base de dados
     const clientRef = db.collection("clients").doc(String(accountNumber));
     const docSnap = await clientRef.get();
 
-    let resultText = "Bloqueado"; // Security default
+    let resultText = "Bloqueado"; // Padrão de segurança
 
     if (docSnap.exists) {
       const client = docSnap.data();
@@ -42,18 +46,19 @@ app.get("/validate", async (req, res) => {
 
         const normalizedBrokerServerFromDB = brokerServerFromDB.trim();
         const normalizedBrokerServerFromRequest = String(brokerServer).trim();
-        
+
         console.log(`[VALIDATION COMPARE] Status from DB: '${statusFromDB}'`);
         console.log(`[VALIDATION COMPARE] Broker from DB (normalized): '${normalizedBrokerServerFromDB}'`);
         console.log(`[VALIDATION COMPARE] Broker from Request (normalized): '${normalizedBrokerServerFromRequest}'`);
 
+        // Usando localeCompare para uma comparação de strings mais robusta
         const areServersEqual =
           normalizedBrokerServerFromDB.localeCompare(
             normalizedBrokerServerFromRequest,
-            undefined, // Use default locale
+            undefined, // Usa o locale padrão
             { sensitivity: "base", ignorePunctuation: true }
           ) === 0;
-          
+
         console.log(`[VALIDATION CHECK] Are servers equal (robust compare): ${areServersEqual}`);
 
         if (statusFromDB === "Liberado" && areServersEqual) {
@@ -70,15 +75,14 @@ app.get("/validate", async (req, res) => {
     }
 
     console.log(`[VALIDATION END] Final result for ${accountNumber}: ${resultText}`);
-    // Respond with plain text as expected by MT5
+    // Responde com texto plano como esperado pelo MT5
     return res.status(200).send(resultText);
   } catch (error) {
     console.error("Error in validateClient function:", error);
-    // Respond with plain text as expected by MT5
+    // Responde com texto plano como esperado pelo MT5
     return res.status(500).send("Bloqueado");
   }
 });
 
-
-// Expose Express API as a single Cloud Function
+// Exporta a aplicação Express como uma única Cloud Function chamada "api"
 exports.api = functions.https.onRequest(app);
