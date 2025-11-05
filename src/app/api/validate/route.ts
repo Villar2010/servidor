@@ -3,17 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 
 // Garante que o SDK do Firebase Admin seja inicializado apenas uma vez.
-// Em ambientes serverless como a Vercel, o código pode ser executado várias vezes,
-// mas a aplicação só deve ser inicializada uma vez.
 if (!admin.apps.length) {
   try {
+    const serviceAccount = {
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    };
+
     admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        // A chave privada precisa ser formatada corretamente
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      }),
+      credential: admin.credential.cert(serviceAccount),
     });
   } catch (error) {
     console.error('Firebase admin initialization error', error);
