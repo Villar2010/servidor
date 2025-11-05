@@ -3,9 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 
 // Garante que o SDK do Firebase Admin seja inicializado apenas uma vez.
-// A inicialização é movida para dentro da função de request para evitar
-// que seja executada durante o processo de build da Vercel, onde as
-// credenciais podem não estar disponíveis.
 function initializeFirebaseAdmin() {
   if (!admin.apps.length) {
     try {
@@ -24,59 +21,37 @@ export async function GET(req: NextRequest) {
   try {
     initializeFirebaseAdmin();
     
-    // Obtenha a instância do DB somente dentro do handler do request e após a inicialização
     const db = admin.firestore();
     const { searchParams } = new URL(req.url);
     const accountNumber = searchParams.get('accountNumber');
-    const brokerServer = searchParams.get('brokerServer');
 
-    if (!accountNumber || !brokerServer) {
-      console.log("[VALIDATION FAIL] Missing parameters:", { accountNumber, brokerServer });
-      return new NextResponse("Bloqueado", { status: 400, headers: { 'Content-Type': 'text/plain' } });
+    if (!accountNumber) {
+      return new NextResponse("Account number not provided.", { status: 400, headers: { 'Content-Type': 'text/plain' } });
     }
 
-    console.log(`[VALIDATION START] Received request for Account: ${accountNumber}, Server: ${brokerServer}`);
-
-    const clientRef = db.collection("clients").doc(String(accountNumber));
+    const clientRef = db.collection("clients").doc(accountNumber);
     const docSnap = await clientRef.get();
 
-    let resultText = "Bloqueado"; 
-
-    if (docSnap.exists) {
-      const client = docSnap.data();
-      console.log(`[VALIDATION INFO] Found document for ${accountNumber}:`, client);
-
-      if (client) {
-        const brokerServerFromDB = client.brokerServer || "";
-        const statusFromDB = client.status || "Bloqueado";
-
-        // TRIM para remover espaços em branco no início e no fim antes de comparar
-        const normalizedBrokerServerFromDB = brokerServerFromDB.trim();
-        const normalizedBrokerServerFromRequest = String(brokerServer).trim();
-
-        console.log(`[VALIDATION COMPARE] Status from DB: '${statusFromDB}'`);
-        console.log(`[VALIDATION COMPARE] Broker from DB (normalized): '${normalizedBrokerServerFromDB}'`);
-        console.log(`[VALIDATION COMPARE] Broker from Request (normalized): '${normalizedBrokerServerFromRequest}'`);
-
-        // Comparação flexível (case-insensitive) usando includes
-        const areServersEqual = normalizedBrokerServerFromDB.toLowerCase().includes(normalizedBrokerServerFromRequest.toLowerCase());
-
-        console.log(`[VALIDATION CHECK] Are servers equal (flexible check): ${areServersEqual}`);
-
-        if (statusFromDB === "Liberado" && areServersEqual) {
-          resultText = "Liberado";
-          console.log(`[VALIDATION SUCCESS] Match for ${accountNumber}. Status: Liberado.`);
-        } else {
-          console.log(`[VALIDATION FAIL] No match for ${accountNumber}. Status check: ${statusFromDB === "Liberado"}. Server check: ${areServersEqual}.`);
-        }
-      }
-    } else {
-      console.log(`[VALIDATION FAIL] Client not found with accountNumber: ${accountNumber}`);
+    if (!docSnap.exists) {
+      const diagnosticText = `Client not found for accountNumber: ${accountNumber}`;
+      console.log(diagnosticText);
+      return new NextResponse(diagnosticText, {
+        status: 404,
+        headers: {
+          'Content-Type': 'text/plain',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
     }
-
-    console.log(`[VALIDATION END] Final result for ${accountNumber}: ${resultText}`);
     
-    return new NextResponse(resultText, {
+    const client = docSnap.data();
+    const statusFromDB = client?.status || "Not available";
+    const brokerServerFromDB = client?.brokerServer || "Not available";
+
+    const diagnosticText = `Status from DB: [${statusFromDB}], Server from DB: [${brokerServerFromDB}]`;
+    console.log(`[DIAGNOSTIC] For ${accountNumber}: ${diagnosticText}`);
+
+    return new NextResponse(diagnosticText, {
       status: 200,
       headers: {
         'Content-Type': 'text/plain',
@@ -85,9 +60,9 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error("Error in /api/validate function:", error);
-    // Em caso de qualquer erro interno, retorne "Bloqueado" por segurança.
-    return new NextResponse("Bloqueado", {
+    console.error("Error in /api/validate diagnostic function:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    return new NextResponse(`Internal Server Error: ${errorMessage}`, {
       status: 500,
       headers: {
         'Content-Type': 'text/plain',
