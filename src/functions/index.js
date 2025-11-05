@@ -1,11 +1,12 @@
-
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const express = require("express");
 const cors = require("cors");
 
 // A inicialização do admin SDK deve acontecer apenas uma vez.
-admin.initializeApp();
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 const db = admin.firestore();
 
 const app = express();
@@ -53,12 +54,12 @@ app.get("/validate", async (req, res) => {
         console.log(`[VALIDATION COMPARE] Broker from DB (normalized): '${normalizedBrokerServerFromDB}'`);
         console.log(`[VALIDATION COMPARE] Broker from Request (normalized): '${normalizedBrokerServerFromRequest}'`);
 
-        // Usando localeCompare para uma comparação de strings mais robusta
+        // Usando localeCompare para uma comparação de strings mais robusta e insensível a maiúsculas/minúsculas
         const areServersEqual =
           normalizedBrokerServerFromDB.localeCompare(
             normalizedBrokerServerFromRequest,
             undefined, 
-            { sensitivity: "base", ignorePunctuation: true }
+            { sensitivity: "base", ignorePunctuation: false }
           ) === 0;
 
         console.log(`[VALIDATION CHECK] Are servers equal (robust compare): ${areServersEqual}`);
