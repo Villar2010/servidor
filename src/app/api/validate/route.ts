@@ -50,20 +50,18 @@ export async function GET(req: NextRequest) {
         const brokerServerFromDB = client.brokerServer || "";
         const statusFromDB = client.status || "Bloqueado";
 
+        // TRIM para remover espaços em branco no início e no fim antes de comparar
         const normalizedBrokerServerFromDB = brokerServerFromDB.trim();
         const normalizedBrokerServerFromRequest = String(brokerServer).trim();
 
         console.log(`[VALIDATION COMPARE] Status from DB: '${statusFromDB}'`);
-        console.log(`[VALIDATION COMPARE] Broker from DB (normalized): '${normalizedBrokerServerFromDB}'`);
-        console.log(`[VALIDATION COMPARE] Broker from Request (normalized): '${normalizedBrokerServerFromRequest}'`);
+        console.log(`[VALIDATION COMPARE] Broker from DB (trimmed): '${normalizedBrokerServerFromDB}'`);
+        console.log(`[VALIDATION COMPARE] Broker from Request (trimmed): '${normalizedBrokerServerFromRequest}'`);
 
-        const areServersEqual = normalizedBrokerServerFromDB.localeCompare(
-            normalizedBrokerServerFromRequest,
-            undefined,
-            { sensitivity: "base", ignorePunctuation: true }
-          ) === 0;
+        // Comparação robusta (case-insensitive) após o trim
+        const areServersEqual = normalizedBrokerServerFromDB.toLowerCase() === normalizedBrokerServerFromRequest.toLowerCase();
 
-        console.log(`[VALIDATION CHECK] Are servers equal (robust compare): ${areServersEqual}`);
+        console.log(`[VALIDATION CHECK] Are servers equal (case-insensitive, trimmed): ${areServersEqual}`);
 
         if (statusFromDB === "Liberado" && areServersEqual) {
           resultText = "Liberado";
