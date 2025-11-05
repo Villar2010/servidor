@@ -55,13 +55,13 @@ export async function GET(req: NextRequest) {
         const normalizedBrokerServerFromRequest = String(brokerServer).trim();
 
         console.log(`[VALIDATION COMPARE] Status from DB: '${statusFromDB}'`);
-        console.log(`[VALIDATION COMPARE] Broker from DB (trimmed): '${normalizedBrokerServerFromDB}'`);
-        console.log(`[VALIDATION COMPARE] Broker from Request (trimmed): '${normalizedBrokerServerFromRequest}'`);
+        console.log(`[VALIDATION COMPARE] Broker from DB (normalized): '${normalizedBrokerServerFromDB}'`);
+        console.log(`[VALIDATION COMPARE] Broker from Request (normalized): '${normalizedBrokerServerFromRequest}'`);
 
-        // Comparação robusta (case-insensitive) após o trim
-        const areServersEqual = normalizedBrokerServerFromDB.toLowerCase() === normalizedBrokerServerFromRequest.toLowerCase();
+        // Comparação flexível (case-insensitive) usando includes
+        const areServersEqual = normalizedBrokerServerFromDB.toLowerCase().includes(normalizedBrokerServerFromRequest.toLowerCase());
 
-        console.log(`[VALIDATION CHECK] Are servers equal (case-insensitive, trimmed): ${areServersEqual}`);
+        console.log(`[VALIDATION CHECK] Are servers equal (flexible check): ${areServersEqual}`);
 
         if (statusFromDB === "Liberado" && areServersEqual) {
           resultText = "Liberado";
