@@ -9,29 +9,24 @@ function initializeFirebaseAdmin() {
     try {
       // Tenta inicializar com as credenciais do ambiente (funciona no Cloud Workstation e Vercel)
       admin.initializeApp();
-      console.log('[API ROUTE] Firebase Admin SDK inicializado com sucesso.');
     } catch (error) {
-      console.error('[API ROUTE] Erro ao inicializar Firebase Admin SDK:', error);
+      // Este erro é esperado durante o build da Vercel, pois as credenciais não estão disponíveis.
+      // A inicialização real ocorrerá no ambiente de execução.
+      console.log('[API ROUTE] A inicialização do Firebase Admin SDK será adiada para o tempo de execução.');
     }
-  } else {
-    console.log('[API ROUTE] Firebase Admin SDK já estava inicializado.');
   }
 }
 
 export async function GET(req: NextRequest) {
-  // Inicializa o SDK a cada pedido para garantir que esteja pronto em ambientes serverless
   initializeFirebaseAdmin();
 
   // Garante que o SDK está pronto antes de tentar usá-lo
   if (!admin.apps.length) {
-    console.error('[API ROUTE] Falha crítica: Firebase Admin não pôde ser inicializado.');
-    // Resposta em texto plano como esperado pelo MT5
-    return new Response('Bloqueado', {
+    const errorMessage = '[API ROUTE] Falha crítica: Firebase Admin não pôde ser inicializado.';
+    console.error(errorMessage);
+    return new Response('Erro no Servidor: Firebase não inicializado.', {
       status: 500,
-      headers: {
-        'Content-Type': 'text/plain',
-        'Access-Control-Allow-Origin': '*', // CORS
-      },
+      headers: { 'Content-Type': 'text/plain' },
     });
   }
 
@@ -40,13 +35,10 @@ export async function GET(req: NextRequest) {
   const accountNumber = searchParams.get('accountNumber');
   const brokerServer = searchParams.get('brokerServer');
 
-  console.log(`[API ROUTE] Recebido pedido para Conta: ${accountNumber}, Servidor: ${brokerServer}`);
-
   if (!accountNumber || !brokerServer) {
-    console.log('[API ROUTE] Falha na validação: Parâmetros em falta.');
-    return new Response('Bloqueado', {
+    return new Response('Erro: Parâmetros accountNumber e brokerServer são obrigatórios.', {
       status: 400,
-      headers: { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' },
+      headers: { 'Content-Type': 'text/plain' },
     });
   }
 
@@ -54,54 +46,36 @@ export async function GET(req: NextRequest) {
     const clientRef = db.collection('clients').doc(String(accountNumber));
     const docSnap = await clientRef.get();
 
-    let resultText = 'Bloqueado'; // Padrão de segurança
+    let diagnosticMessage = '';
 
     if (docSnap.exists) {
       const client = docSnap.data();
-      console.log(`[API ROUTE] Documento encontrado para ${accountNumber}:`, client);
+      const statusFromDB = client?.status || 'N/A';
+      const serverFromDB = client?.brokerServer || 'N/A';
+      
+      // Monta a string de diagnóstico
+      diagnosticMessage = `Status from DB: [${statusFromDB}], Server from DB: [${serverFromDB}]`;
 
-      if (client) {
-        // Normaliza as strings para uma comparação robusta
-        const brokerServerFromDB = (client.brokerServer || '').trim();
-        const statusFromDB = (client.status || 'Bloqueado').trim();
-        const brokerServerFromRequest = String(brokerServer).trim();
-
-        console.log(`[API ROUTE] Status da BD: '${statusFromDB}'`);
-        console.log(`[API ROUTE] Servidor da BD (normalizado): '${brokerServerFromDB}'`);
-        console.log(`[API ROUTE] Servidor do Pedido (normalizado): '${brokerServerFromRequest}'`);
-
-        // Comparação robusta, insensível a maiúsculas/minúsculas
-        const areServersEqual = brokerServerFromDB.localeCompare(brokerServerFromRequest, undefined, { sensitivity: 'base' }) === 0;
-        
-        console.log(`[API ROUTE] Verificação do Servidor (são iguais?): ${areServersEqual}`);
-        
-        if (statusFromDB === 'Liberado' && areServersEqual) {
-          resultText = 'Liberado';
-          console.log(`[API ROUTE] SUCESSO: Validação bem-sucedida para ${accountNumber}.`);
-        } else {
-          console.log(`[API ROUTE] FALHA: A validação não passou. Status é 'Liberado'? ${statusFromDB === 'Liberado'}. Servidores são iguais? ${areServersEqual}.`);
-        }
-      }
     } else {
-      console.log(`[API ROUTE] Cliente não encontrado com o número de conta: ${accountNumber}`);
+      diagnosticMessage = `Client with accountNumber [${accountNumber}] not found.`;
     }
 
-    console.log(`[API ROUTE] Resultado final para ${accountNumber}: ${resultText}`);
-    return new Response(resultText, {
+    // Retorna a mensagem de diagnóstico
+    return new Response(diagnosticMessage, {
       status: 200,
-      headers: { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' },
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     });
 
   } catch (error) {
-    console.error('[API ROUTE] Erro inesperado durante a validação:', error);
-    return new Response('Bloqueado', {
+    console.error('[API ROUTE] Erro inesperado durante o diagnóstico:', error);
+    return new Response('Erro Interno do Servidor durante o diagnóstico.', {
       status: 500,
-      headers: { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' },
+      headers: { 'Content-Type': 'text/plain' },
     });
   }
 }
 
-// Handler para pre-flight requests do CORS
+// Handler para pre-flight requests do CORS, importante para chamadas externas.
 export async function OPTIONS() {
   return new Response(null, {
     status: 204,
