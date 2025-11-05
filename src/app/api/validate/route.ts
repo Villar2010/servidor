@@ -3,19 +3,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 
 // Garante que o SDK do Firebase Admin seja inicializado apenas uma vez.
-// Em ambientes Google Cloud (como Cloud Workstations e Vercel), 
-// initializeApp() detecta automaticamente as credenciais.
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp();
-  } catch (error) {
-    console.error('Firebase admin initialization error', error);
+// A inicialização é movida para dentro da função de request para evitar
+// que seja executada durante o processo de build da Vercel, onde as
+// credenciais podem não estar disponíveis.
+function initializeFirebaseAdmin() {
+  if (!admin.apps.length) {
+    try {
+      console.log('Initializing Firebase Admin SDK...');
+      admin.initializeApp();
+      console.log('Firebase Admin SDK initialized successfully.');
+    } catch (error) {
+      console.error('Firebase admin initialization error', error);
+    }
+  } else {
+    console.log('Firebase Admin SDK already initialized.');
   }
 }
 
 export async function GET(req: NextRequest) {
   try {
-    // Obtenha a instância do DB somente dentro do handler do request
+    initializeFirebaseAdmin();
+    
+    // Obtenha a instância do DB somente dentro do handler do request e após a inicialização
     const db = admin.firestore();
     const { searchParams } = new URL(req.url);
     const accountNumber = searchParams.get('accountNumber');
