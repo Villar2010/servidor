@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
         console.log(`[VALIDATION COMPARE] Broker from DB (normalized): '${normalizedBrokerServerFromDB}'`);
         console.log(`[VALIDATION COMPARE] Broker from Request (normalized): '${normalizedBrokerServerFromRequest}'`);
 
+        // Usando localeCompare para uma comparação de strings mais robusta, ignorando maiúsculas/minúsculas e acentos.
         const areServersEqual = normalizedBrokerServerFromDB.localeCompare(
             normalizedBrokerServerFromRequest,
             undefined,
