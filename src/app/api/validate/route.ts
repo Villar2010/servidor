@@ -30,7 +30,13 @@ export async function GET(req: NextRequest) {
 
     if (!accountNumber || !brokerServer) {
       console.log("[VALIDATION FAIL] Missing parameters:", { accountNumber, brokerServer });
-      return NextResponse.json({ status: "error", message: "Parâmetros 'accountNumber' e 'brokerServer' são obrigatórios." }, { status: 400 });
+      return new Response("Bloqueado", {
+        status: 400,
+        headers: {
+          'Content-Type': 'text/plain',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
     }
 
     console.log(`[VALIDATION START] Received request for Account: ${accountNumber}, Server: ${brokerServer}`);
@@ -109,7 +115,7 @@ export async function OPTIONS() {
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   });
