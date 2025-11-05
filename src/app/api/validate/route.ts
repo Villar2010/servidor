@@ -30,13 +30,7 @@ export async function GET(req: NextRequest) {
 
     if (!accountNumber || !brokerServer) {
       console.log("[VALIDATION FAIL] Missing parameters:", { accountNumber, brokerServer });
-      return new Response("Bloqueado", {
-        status: 400,
-        headers: {
-          'Content-Type': 'text/plain',
-          'Access-Control-Allow-Origin': '*',
-        },
-      });
+      return new NextResponse("Bloqueado", { status: 400 });
     }
 
     console.log(`[VALIDATION START] Received request for Account: ${accountNumber}, Server: ${brokerServer}`);
@@ -83,27 +77,21 @@ export async function GET(req: NextRequest) {
 
     console.log(`[VALIDATION END] Final result for ${accountNumber}: ${resultText}`);
     
-    // Retorna texto plano como esperado pelo MT5, com os cabeçalhos CORS corretos.
-    return new Response(resultText, {
+    // Retorna texto plano como esperado pelo MT5. NextResponse garante os headers corretos.
+    return new NextResponse(resultText, {
       status: 200,
       headers: {
         'Content-Type': 'text/plain',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
       },
     });
 
   } catch (error) {
     console.error("Error in /api/validate function:", error);
-    // Retorna texto plano em caso de erro, com os cabeçalhos CORS.
-    return new Response("Bloqueado", {
+    // Retorna texto plano em caso de erro.
+    return new NextResponse("Bloqueado", {
       status: 500,
       headers: {
         'Content-Type': 'text/plain',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
       },
     });
   }
@@ -111,12 +99,7 @@ export async function GET(req: NextRequest) {
 
 // Handler para pre-flight requests (CORS)
 export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
+  return new NextResponse(null, {
+    status: 204
   });
 }
