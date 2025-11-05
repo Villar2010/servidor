@@ -19,9 +19,8 @@ if (!admin.apps.length) {
   }
 }
 
-const db = admin.firestore();
-
 export async function GET(req: NextRequest) {
+  const db = admin.firestore(); // Obtenha a instância do DB aqui
   try {
     const { searchParams } = new URL(req.url);
     const accountNumber = searchParams.get('accountNumber');
@@ -29,7 +28,7 @@ export async function GET(req: NextRequest) {
 
     if (!accountNumber || !brokerServer) {
       console.log("[VALIDATION FAIL] Missing parameters:", { accountNumber, brokerServer });
-      return new NextResponse("Bloqueado", { status: 400 });
+      return new NextResponse("Bloqueado", { status: 400, headers: { 'Content-Type': 'text/plain' } });
     }
 
     console.log(`[VALIDATION START] Received request for Account: ${accountNumber}, Server: ${brokerServer}`);
@@ -54,7 +53,6 @@ export async function GET(req: NextRequest) {
         console.log(`[VALIDATION COMPARE] Broker from DB (normalized): '${normalizedBrokerServerFromDB}'`);
         console.log(`[VALIDATION COMPARE] Broker from Request (normalized): '${normalizedBrokerServerFromRequest}'`);
 
-        // Usando localeCompare para uma comparação de strings mais robusta, ignorando maiúsculas/minúsculas e acentos.
         const areServersEqual = normalizedBrokerServerFromDB.localeCompare(
             normalizedBrokerServerFromRequest,
             undefined,
@@ -76,7 +74,6 @@ export async function GET(req: NextRequest) {
 
     console.log(`[VALIDATION END] Final result for ${accountNumber}: ${resultText}`);
     
-    // Retorna texto plano como esperado pelo MT5. NextResponse garante os headers corretos.
     return new NextResponse(resultText, {
       status: 200,
       headers: {
@@ -86,7 +83,6 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error("Error in /api/validate function:", error);
-    // Retorna texto plano em caso de erro.
     return new NextResponse("Bloqueado", {
       status: 500,
       headers: {
