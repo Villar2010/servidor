@@ -2,42 +2,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 
-// Função para inicializar o Firebase Admin SDK de forma segura e robusta.
+// Função para inicializar o Firebase Admin SDK de forma segura,
+// ideal para ambientes serverless como a Vercel.
 function initializeFirebaseAdmin() {
-  // Evita reinicializações em ambientes de hot-reload
+  // Evita reinicializações desnecessárias.
   if (admin.apps.length > 0) {
     return;
   }
 
-  // As credenciais são carregadas das variáveis de ambiente.
-  // No build da Vercel, estas variáveis podem não estar presentes, por isso verificamos.
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const projectId = process.env.FIREBASE_PROJECT_ID;
+  // A abordagem mais robusta para a Vercel é usar uma única variável de ambiente
+  // contendo o JSON completo da conta de serviço.
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
-  // Só tenta inicializar se as credenciais estiverem disponíveis.
-  // Isso impede que o processo de build da Vercel falhe.
-  if (privateKey && clientEmail && projectId) {
+  if (serviceAccountJson) {
     try {
+      const serviceAccount = JSON.parse(serviceAccountJson);
+      console.log('[API ROUTE] Initializing Firebase Admin with service account JSON from env var.');
       admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: projectId,
-          clientEmail: clientEmail,
-          // A chave privada precisa de ter os caracteres de nova linha restaurados.
-          privateKey: privateKey.replace(/\\n/g, '\n'),
-        }),
+        credential: admin.credential.cert(serviceAccount),
       });
-    } catch (error) {
-        console.error('[API ROUTE] Erro CRÍTICO na inicialização do Firebase Admin:', error);
+    } catch (error: any) {
+      console.error(
+        '[API ROUTE] CRITICAL: Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON. Ensure it is a valid, single-line JSON string.',
+        error.message
+      );
     }
   } else {
-    // Em produção (Vercel), se as variáveis não estiverem definidas,
-    // podemos tentar a inicialização padrão que usa as credenciais do ambiente.
-    // Em desenvolvimento, isso pode não funcionar se as variáveis não estiverem no .env
+    // Tenta a inicialização padrão como fallback (útil para outros ambientes Google Cloud)
+    // mas avisa se a variável principal estiver em falta.
+    console.warn(
+      '[API ROUTE] WARNING: FIREBASE_SERVICE_ACCOUNT_JSON env var not found. Attempting default initialization. This might fail.'
+    );
     try {
-        admin.initializeApp();
-    } catch(e) {
-        console.log('[API ROUTE] Tentativa de inicialização padrão falhou. Verifique as variáveis de ambiente.');
+      admin.initializeApp();
+    } catch (e) {
+      console.error('[API ROUTE] CRITICAL: Default Firebase Admin initialization failed.');
     }
   }
 }
@@ -48,7 +47,8 @@ export async function GET(req: NextRequest) {
 
   // Garante que o SDK está pronto antes de tentar usá-lo.
   if (!admin.apps.length || !admin.app().options.credential) {
-    const errorMessage = '[API ROUTE] Falha crítica: Firebase Admin não pôde ser inicializado. Verifique as credenciais do servidor e as variáveis de ambiente.';
+    const errorMessage =
+      '[API ROUTE] Falha crítica: Firebase Admin não pôde ser inicializado. Verifique as credenciais do servidor e a variável de ambiente FIREBASE_SERVICE_ACCOUNT_JSON.';
     console.error(errorMessage);
     return new Response('Erro no Servidor: Firebase não inicializado.', {
       status: 500,
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
       const client = docSnap.data();
       const statusFromDB = client?.status || 'N/A';
       const serverFromDB = client?.brokerServer || 'N/A';
-      
+
       // Monta a string de diagnóstico
       diagnosticMessage = `Status from DB: [${statusFromDB}], Server from DB: [${serverFromDB}]`;
 
