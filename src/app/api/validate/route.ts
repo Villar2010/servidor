@@ -3,25 +3,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 
 // Garante que o SDK do Firebase Admin seja inicializado apenas uma vez.
+// Em ambientes Google Cloud (como Cloud Workstations e Vercel), 
+// initializeApp() detecta automaticamente as credenciais.
 if (!admin.apps.length) {
   try {
-    const serviceAccount = {
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    };
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
+    admin.initializeApp();
   } catch (error) {
     console.error('Firebase admin initialization error', error);
   }
 }
 
 export async function GET(req: NextRequest) {
-  const db = admin.firestore(); // Obtenha a instância do DB aqui
   try {
+    // Obtenha a instância do DB somente dentro do handler do request
+    const db = admin.firestore();
     const { searchParams } = new URL(req.url);
     const accountNumber = searchParams.get('accountNumber');
     const brokerServer = searchParams.get('brokerServer');
@@ -78,15 +73,18 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'text/plain',
+        'Access-Control-Allow-Origin': '*',
       },
     });
 
   } catch (error) {
     console.error("Error in /api/validate function:", error);
+    // Em caso de qualquer erro interno, retorne "Bloqueado" por segurança.
     return new NextResponse("Bloqueado", {
       status: 500,
       headers: {
         'Content-Type': 'text/plain',
+        'Access-Control-Allow-Origin': '*',
       },
     });
   }
@@ -95,6 +93,11 @@ export async function GET(req: NextRequest) {
 // Handler para pre-flight requests (CORS)
 export async function OPTIONS() {
   return new NextResponse(null, {
-    status: 204
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    }
   });
 }
