@@ -89,6 +89,13 @@ export async function GET(req: NextRequest) {
         headers: { 'Content-Type': 'text/plain; charset=utf-8' },
       });
     } else {
+      // Log why the validation failed
+      if (!isStatusLiberado) {
+        console.log(`[VALIDATION_FAIL] Reason: Status is not 'Liberado'. It is '${statusFromDB}'.`);
+      }
+      if (!areServersEqual) {
+        console.log(`[VALIDATION_FAIL] Reason: Server mismatch. Request: '${brokerServerFromRequest}', DB: '${brokerServerFromDB}'.`);
+      }
       console.log(`[VALIDATION_FAIL] Final result for ${accountNumber}: Bloqueado`);
       return new Response('Bloqueado', {
         status: 200,
