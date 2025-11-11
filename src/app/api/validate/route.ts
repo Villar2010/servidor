@@ -34,7 +34,8 @@ function initializeFirebaseAdmin() {
 
 export async function GET(req: NextRequest) {
   try {
-    // This function will initialize Firebase Admin SDK only if it hasn't been already.
+    // CRITICAL: Initialize Firebase Admin SDK inside the handler.
+    // This ensures it runs on request time, not build time.
     initializeFirebaseAdmin();
 
     const db = admin.firestore();
@@ -44,7 +45,6 @@ export async function GET(req: NextRequest) {
 
     if (!accountNumber || !brokerServerFromRequest) {
       console.log('[VALIDATION_FAIL] Missing parameters:', { accountNumber, brokerServer: brokerServerFromRequest });
-      // Although MT5 expects plain text, returning a NextResponse is safer.
       return new NextResponse('Missing accountNumber or brokerServer parameter.', { status: 400 });
     }
 
