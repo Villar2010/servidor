@@ -2,43 +2,66 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 
-export async function GET(req: NextRequest) {
-  try {
-    // 1. GARANTIR A INICIALIZAÇÃO SEGURA
-    if (admin.apps.length === 0) {
-      console.log('[API_VALIDATE] No Firebase Admin app initialized. Attempting to initialize...');
-      if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-        throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set.');
-      }
-      try {
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
-        });
-        console.log('[API_VALIDATE_SUCCESS] Firebase Admin SDK initialized successfully.');
-      } catch (initError: any) {
-        console.error('[API_VALIDATE_INIT_ERROR] Firebase Admin SDK initialization failed:', initError.message);
-        throw new Error('Firebase Admin SDK could not be initialized.');
-      }
+// Função para garantir que o Firebase Admin seja inicializado apenas uma vez.
+function initializeFirebaseAdmin() {
+  // Verifica se já existe uma app inicializada para evitar erros.
+  if (admin.apps.length === 0) {
+    console.log('[API_VALIDATE] No Firebase Admin app found. Attempting to initialize...');
+    
+    // Verifica se a variável de ambiente essencial existe.
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+      console.error('[API_VALIDATE_FATAL] CRITICAL: FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set.');
+      throw new Error('Firebase Admin SDK configuration is missing.');
     }
 
-    const db = admin.firestore();
+    try {
+      // Parseia as credenciais a partir da variável de ambiente.
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+      
+      // Inicializa a app com as credenciais.
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+      console.log('[API_VALIDATE_SUCCESS] Firebase Admin SDK initialized successfully.');
+
+    } catch (initError: any) {
+      console.error('[API_VALIDATE_INIT_ERROR] CRITICAL: Firebase Admin SDK initialization failed:', initError.message);
+      // Lança o erro para ser capturado pelo bloco catch principal da rota.
+      throw new Error('Firebase Admin SDK could not be initialized due to a parsing or credential error.');
+    }
+  } else {
+    console.log('[API_VALIDATE] Firebase Admin app already initialized.');
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    // Passo 1: Garante que o Firebase está inicializado.
+    initializeFirebaseAdmin();
+
+    // Passo 2: Obtém os parâmetros da query string.
     const { searchParams } = new URL(req.url);
     const accountNumber = searchParams.get('accountNumber');
     const brokerServerFromRequest = searchParams.get('brokerServer');
 
-    // 2. VALIDAR PARÂMETROS
+    // Passo 3: Valida se os parâmetros necessários foram fornecidos.
     if (!accountNumber || !brokerServerFromRequest) {
       console.log('[VALIDATION_FAIL] Missing parameters:', { accountNumber, brokerServer: brokerServerFromRequest });
-      return new NextResponse('Missing accountNumber or brokerServer parameter.', { status: 400 });
+      // Devolve 'Bloqueado' se os parâmetros estiverem em falta, pois é uma falha de validação.
+      return new NextResponse('Bloqueado', {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      });
     }
 
     console.log(`[VALIDATION_START] Received for Account: ${accountNumber}, Server: ${brokerServerFromRequest}`);
 
-    // 3. LER DA BASE DE DADOS
+    // Passo 4: Acede à base de dados e obtém o documento do cliente.
+    const db = admin.firestore();
     const clientRef = db.collection('clients').doc(String(accountNumber));
     const docSnap = await clientRef.get();
 
+    // Passo 5: Verifica se o cliente existe.
     if (!docSnap.exists) {
       console.log(`[VALIDATION_FAIL] Client not found with accountNumber: ${accountNumber}`);
       return new NextResponse('Bloqueado', {
@@ -47,19 +70,21 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 4. EXECUTAR A LÓGICA DE VALIDAÇÃO
-    const client = docSnap.data()!;
-    const statusFromDB = client.status;
-    const brokerServerFromDB = client.brokerServer;
+    // Passo 6: Executa a lógica de validação com os dados do cliente.
+    const clientData = docSnap.data()!;
+    const statusFromDB = clientData.status;
+    const brokerServerFromDB = clientData.brokerServer;
 
     console.log(`[VALIDATION_DATA] DB Status: "${statusFromDB}", DB Server: "${brokerServerFromDB}"`);
 
+    // Validação robusta
     const isStatusLiberado = statusFromDB === 'Liberado';
-    const areServersEqual = brokerServerFromDB.trim().toLowerCase() === brokerServerFromRequest.trim().toLowerCase();
+    // Compara os servidores após limpar espaços e converter para minúsculas para evitar erros.
+    const areServersEqual = brokerServerFromDB?.trim().toLowerCase() === brokerServerFromRequest.trim().toLowerCase();
 
     console.log(`[VALIDATION_CHECK] Status OK: ${isStatusLiberado}, Server OK: ${areServersEqual}`);
 
-    // 5. DEVOLVER O RESULTADO FINAL
+    // Passo 7: Devolve o resultado final com base na validação.
     if (isStatusLiberado && areServersEqual) {
       console.log(`[VALIDATION_SUCCESS] Final result for ${accountNumber}: Liberado`);
       return new NextResponse('Liberado', {
@@ -78,8 +103,9 @@ export async function GET(req: NextRequest) {
     }
 
   } catch (error: any) {
-    // Bloco catch principal para apanhar qualquer erro inesperado
-    console.error('[API_VALIDATE_FATAL_ERROR] An unhandled error occurred:', error.message);
+    // Bloco catch principal para apanhar qualquer erro inesperado durante a execução.
+    console.error('[API_VALIDATE_FATAL_ERROR] An unhandled error occurred in GET handler:', error.message);
+    // Devolve uma resposta de erro 500 para indicar um problema no servidor.
     return new NextResponse('Internal Server Error', {
       status: 500,
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
@@ -87,7 +113,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// OPTIONS handler para CORS pre-flight requests.
+// Handler OPTIONS para CORS pre-flight requests.
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
