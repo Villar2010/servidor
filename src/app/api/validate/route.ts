@@ -2,47 +2,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 
-// Helper function to initialize Firebase Admin SDK safely.
-// It ensures initialization only happens once.
-function initializeFirebaseAdmin() {
-  // Check if the app is already initialized to prevent errors.
-  if (admin.apps.length > 0) {
-    return;
-  }
-
-  console.log('[API_VALIDATE] Attempting to initialize Firebase Admin SDK...');
-
-  // This is the recommended approach for Vercel. It expects a single environment variable
-  // `FIREBASE_SERVICE_ACCOUNT_JSON` containing the full JSON string of the service account key.
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set.');
-  }
-
-  try {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    console.log('[API_VALIDATE_SUCCESS] Firebase Admin SDK initialized successfully.');
-  } catch (error: any) {
-    console.error('[API_VALIDATE_INIT_ERROR] Firebase Admin SDK initialization failed catastrophically:', error.message);
-    // This error will be caught by the main handler's try-catch block and will
-    // result in a controlled 500 error response instead of a crash.
-    throw new Error('Firebase Admin SDK could not be initialized. Check the service account JSON.');
-  }
-}
-
 export async function GET(req: NextRequest) {
   try {
-    // CRITICAL: Initialize Firebase Admin SDK inside the handler.
-    // This ensures it runs on request time, not build time.
-    initializeFirebaseAdmin();
+    // 1. GARANTIR A INICIALIZAÇÃO SEGURA
+    if (admin.apps.length === 0) {
+      console.log('[API_VALIDATE] No Firebase Admin app initialized. Attempting to initialize...');
+      if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+        throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set.');
+      }
+      try {
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount),
+        });
+        console.log('[API_VALIDATE_SUCCESS] Firebase Admin SDK initialized successfully.');
+      } catch (initError: any) {
+        console.error('[API_VALIDATE_INIT_ERROR] Firebase Admin SDK initialization failed:', initError.message);
+        throw new Error('Firebase Admin SDK could not be initialized.');
+      }
+    }
 
     const db = admin.firestore();
     const { searchParams } = new URL(req.url);
     const accountNumber = searchParams.get('accountNumber');
     const brokerServerFromRequest = searchParams.get('brokerServer');
 
+    // 2. VALIDAR PARÂMETROS
     if (!accountNumber || !brokerServerFromRequest) {
       console.log('[VALIDATION_FAIL] Missing parameters:', { accountNumber, brokerServer: brokerServerFromRequest });
       return new NextResponse('Missing accountNumber or brokerServer parameter.', { status: 400 });
@@ -50,6 +35,7 @@ export async function GET(req: NextRequest) {
 
     console.log(`[VALIDATION_START] Received for Account: ${accountNumber}, Server: ${brokerServerFromRequest}`);
 
+    // 3. LER DA BASE DE DADOS
     const clientRef = db.collection('clients').doc(String(accountNumber));
     const docSnap = await clientRef.get();
 
@@ -61,6 +47,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // 4. EXECUTAR A LÓGICA DE VALIDAÇÃO
     const client = docSnap.data()!;
     const statusFromDB = client.status;
     const brokerServerFromDB = client.brokerServer;
@@ -68,12 +55,11 @@ export async function GET(req: NextRequest) {
     console.log(`[VALIDATION_DATA] DB Status: "${statusFromDB}", DB Server: "${brokerServerFromDB}"`);
 
     const isStatusLiberado = statusFromDB === 'Liberado';
-    
-    // Robust comparison: trim whitespace and ignore case.
     const areServersEqual = brokerServerFromDB.trim().toLowerCase() === brokerServerFromRequest.trim().toLowerCase();
 
     console.log(`[VALIDATION_CHECK] Status OK: ${isStatusLiberado}, Server OK: ${areServersEqual}`);
 
+    // 5. DEVOLVER O RESULTADO FINAL
     if (isStatusLiberado && areServersEqual) {
       console.log(`[VALIDATION_SUCCESS] Final result for ${accountNumber}: Liberado`);
       return new NextResponse('Liberado', {
@@ -81,12 +67,9 @@ export async function GET(req: NextRequest) {
         headers: { 'Content-Type': 'text/plain; charset=utf-8' },
       });
     } else {
-      if (!isStatusLiberado) {
-        console.log(`[VALIDATION_FAIL] Reason: Status is not 'Liberado'. It is '${statusFromDB}'.`);
-      }
-      if (!areServersEqual) {
-        console.log(`[VALIDATION_FAIL] Reason: Server mismatch. Request: '${brokerServerFromRequest}', DB: '${brokerServerFromDB}'.`);
-      }
+      if (!isStatusLiberado) console.log(`[VALIDATION_FAIL] Reason: Status is not 'Liberado'.`);
+      if (!areServersEqual) console.log(`[VALIDATION_FAIL] Reason: Server mismatch.`);
+      
       console.log(`[VALIDATION_FAIL] Final result for ${accountNumber}: Bloqueado`);
       return new NextResponse('Bloqueado', {
         status: 200,
@@ -95,6 +78,7 @@ export async function GET(req: NextRequest) {
     }
 
   } catch (error: any) {
+    // Bloco catch principal para apanhar qualquer erro inesperado
     console.error('[API_VALIDATE_FATAL_ERROR] An unhandled error occurred:', error.message);
     return new NextResponse('Internal Server Error', {
       status: 500,
@@ -103,7 +87,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// OPTIONS handler for CORS pre-flight requests.
+// OPTIONS handler para CORS pre-flight requests.
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
