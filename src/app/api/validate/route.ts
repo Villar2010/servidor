@@ -12,11 +12,20 @@ function getFirebaseAdmin() {
       if (!rawServiceAccount) {
         throw new Error("Variável de ambiente FIREBASE_SERVICE_ACCOUNT_JSON não encontrada.");
       }
+      
+      const serviceAccountParsed = JSON.parse(rawServiceAccount);
 
-      const serviceAccount = JSON.parse(rawServiceAccount);
+      // ✨ CORREÇÃO: Restaura as quebras de linha na chave privada.
+      // Ambientes de produção (como a Vercel) frequentemente escapam newlines (\n -> \\n).
+      const privateKey = serviceAccountParsed.private_key.replace(/\\n/g, '\n');
+      
+      const credential = {
+        ...serviceAccountParsed,
+        private_key: privateKey,
+      }
 
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+        credential: admin.credential.cert(credential),
       });
 
       console.log("✅ Firebase inicializado com sucesso!");
