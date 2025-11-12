@@ -16,7 +16,6 @@ function getFirebaseAdmin() {
       const serviceAccountParsed = JSON.parse(rawServiceAccount);
 
       // ✨ CORREÇÃO: Restaura as quebras de linha na chave privada.
-      // Ambientes de produção (como a Vercel) frequentemente escapam newlines (\n -> \\n).
       const privateKey = serviceAccountParsed.private_key.replace(/\\n/g, '\n');
       
       const credential = {
