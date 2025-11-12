@@ -85,8 +85,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm">
+    <div 
+        className="flex min-h-screen items-center justify-center bg-cover bg-center px-4"
+        style={{ backgroundImage: "url('https://i.postimg.cc/G2B0kWBS/Captura-de-Tela-2025-11-11-a-s-23-37-30.png')" }}
+    >
+      <Card className="w-full max-w-sm bg-background/80 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Login de Administrador</CardTitle>
           <CardDescription>
