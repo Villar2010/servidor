@@ -1,25 +1,32 @@
 import { NextResponse } from "next/server";
-import admin from "firebase-admin";
+import * as admin from "firebase-admin";
 
-// Inicialização segura do Firebase Admin (apenas uma vez)
-if (!admin.apps.length) {
-  try {
-    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
-      ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON)
-      : undefined;
+// 🔹 Função auxiliar para inicializar o Firebase apenas uma vez
+function getFirebaseAdmin() {
+  if (admin.apps.length === 0) {
+    try {
+      console.log("🚀 Inicializando Firebase Admin...");
 
-    if (!serviceAccount) {
-      console.warn("⚠️ Variável FIREBASE_SERVICE_ACCOUNT_JSON não encontrada. Usando credenciais padrão.");
-      admin.initializeApp({ credential: admin.credential.applicationDefault() });
-    } else {
-      admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+      const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+
+      if (!raw) throw new Error("Variável FIREBASE_SERVICE_ACCOUNT_JSON ausente!");
+
+      const serviceAccount = JSON.parse(raw);
+
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+
+      console.log("✅ Firebase inicializado com sucesso!");
+    } catch (error) {
+      console.error("❌ Erro ao inicializar Firebase:", error);
+      throw error;
     }
-  } catch (error) {
-    console.error("❌ Erro ao inicializar Firebase Admin:", error);
   }
+
+  return admin;
 }
 
-// Função principal GET
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -27,15 +34,21 @@ export async function GET(request: Request) {
     const brokerServer = searchParams.get("brokerServer");
 
     if (!accountNumber) {
-      return NextResponse.json({ status: "error", message: "Faltando parâmetro: accountNumber" }, { status: 400 });
+      return NextResponse.json(
+        { result: "Erro", message: "Faltando parâmetro: accountNumber" },
+        { status: 400 }
+      );
     }
 
-    // Busca o cliente no Firestore
-    const snapshot = await admin.firestore().collection("clientes").doc(accountNumber).get();
+    // 🔹 Garante que o Firebase está inicializado ANTES de usar o Firestore
+    const adminInstance = getFirebaseAdmin();
+    const db = adminInstance.firestore();
+
+    const snapshot = await db.collection("clientes").doc(accountNumber).get();
 
     if (!snapshot.exists) {
       console.log(`🚫 Conta não encontrada: ${accountNumber}`);
-      return NextResponse.json({ result: "Bloqueado", motivo: "Conta não cadastrada" }, { status: 200 });
+      return NextResponse.json({ result: "Bloqueado", motivo: "Conta não cadastrada" });
     }
 
     const data = snapshot.data() || {};
@@ -45,12 +58,12 @@ export async function GET(request: Request) {
     const brokerReceived = (brokerServer || "").trim().toLowerCase();
 
     console.log(`🔍 Conta: ${accountNumber}`);
-    console.log(`📦 Status no DB: ${statusFromDB}`);
+    console.log(`📦 Status: ${statusFromDB}`);
     console.log(`🌐 Broker DB: ${brokerFromDB}`);
     console.log(`🛰️ Broker recebido: ${brokerReceived}`);
 
-    // Verifica se está liberado e se o broker corresponde
-    const isLiberado = statusFromDB === "liberado" && brokerFromDB === brokerReceived;
+    const isLiberado =
+      statusFromDB === "liberado" && brokerFromDB === brokerReceived;
 
     if (isLiberado) {
       console.log(`✅ Conta ${accountNumber} está LIBERADA`);
@@ -59,9 +72,11 @@ export async function GET(request: Request) {
       console.log(`⛔ Conta ${accountNumber} está BLOQUEADA`);
       return NextResponse.json({ result: "Bloqueado" }, { status: 200 });
     }
-
   } catch (error: any) {
-    console.error("🔥 Erro interno na API /validate:", error);
-    return NextResponse.json({ result: "Erro", message: error.message }, { status: 500 });
+    console.error("🔥 Erro interno:", error);
+    return NextResponse.json(
+      { result: "Erro", message: error.message || "Erro interno no servidor" },
+      { status: 500 }
+    );
   }
 }
