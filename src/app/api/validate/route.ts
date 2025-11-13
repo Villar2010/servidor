@@ -38,9 +38,22 @@ function getFirebaseAdmin() {
   return admin;
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Lida com preflight requests do CORS
+export async function OPTIONS(request: Request) {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders,
+  });
+}
+
 export async function GET(request: Request) {
   try {
-    // 🔹 Garante que o Firebase está inicializado ANTES de usar o Firestore
     const adminInstance = getFirebaseAdmin();
     const db = adminInstance.firestore();
 
@@ -49,10 +62,7 @@ export async function GET(request: Request) {
     const brokerServer = searchParams.get("brokerServer");
 
     if (!accountNumber) {
-      return NextResponse.json(
-        { result: "Erro", message: "Faltando parâmetro: accountNumber" },
-        { status: 400 }
-      );
+      return new Response("Erro: Faltando parâmetro: accountNumber", { status: 400, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
     }
     
     console.log(`Recebida validação para Conta: ${accountNumber}, Servidor: ${brokerServer}`);
@@ -62,7 +72,7 @@ export async function GET(request: Request) {
 
     if (!snapshot.exists) {
       console.log(`🚫 Conta não encontrada na base de dados: ${accountNumber}`);
-      return NextResponse.json({ result: "Bloqueado", motivo: "Conta não cadastrada" }, { status: 200 });
+      return new Response("Bloqueado", { status: 200, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
     }
 
     const data = snapshot.data() || {};
@@ -79,20 +89,17 @@ export async function GET(request: Request) {
 
     if (isLiberado && isServerMatch) {
       console.log(`✅ CONTA LIBERADA: ${accountNumber}`);
-      return NextResponse.json({ result: "Liberado" }, { status: 200 });
+      return new Response("Liberado", { status: 200, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
     } else {
       let motivo = "";
       if (!isLiberado) motivo = `Status na base de dados é '${data.status || "N/A"}'`;
       else if (!isServerMatch) motivo = `Servidor da corretora não corresponde (Recebido: '${brokerServer}', Esperado: '${data.brokerServer}')`;
       console.log(`⛔ CONTA BLOQUEADA: ${accountNumber}. Motivo: ${motivo}`);
-      return NextResponse.json({ result: "Bloqueado", motivo: motivo }, { status: 200 });
+      return new Response("Bloqueado", { status: 200, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
     }
 
   } catch (error: any) {
     console.error("🔥 Erro interno na API de validação:", error);
-    return NextResponse.json(
-      { result: "Erro", message: error.message || "Erro interno no servidor" },
-      { status: 500 }
-    );
+    return new Response(`Erro: ${error.message || "Erro interno no servidor"}`, { status: 500, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
   }
 }
