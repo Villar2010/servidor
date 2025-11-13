@@ -42,6 +42,7 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Content-Type': 'text/plain',
 };
 
 // Lida com preflight requests do CORS
@@ -62,7 +63,7 @@ export async function GET(request: Request) {
     const brokerServer = searchParams.get("brokerServer");
 
     if (!accountNumber) {
-      return new Response("Erro: Faltando parâmetro: accountNumber", { status: 400, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
+      return new Response("Erro: Faltando parâmetro: accountNumber", { status: 400, headers: corsHeaders });
     }
     
     console.log(`Recebida validação para Conta: ${accountNumber}, Servidor: ${brokerServer}`);
@@ -72,7 +73,7 @@ export async function GET(request: Request) {
 
     if (!snapshot.exists) {
       console.log(`🚫 Conta não encontrada na base de dados: ${accountNumber}`);
-      return new Response("Bloqueado", { status: 200, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
+      return new Response("Bloqueado", { status: 200, headers: corsHeaders });
     }
 
     const data = snapshot.data() || {};
@@ -89,17 +90,17 @@ export async function GET(request: Request) {
 
     if (isLiberado && isServerMatch) {
       console.log(`✅ CONTA LIBERADA: ${accountNumber}`);
-      return new Response("Liberado", { status: 200, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
+      return new Response("Liberado", { status: 200, headers: corsHeaders });
     } else {
       let motivo = "";
       if (!isLiberado) motivo = `Status na base de dados é '${data.status || "N/A"}'`;
       else if (!isServerMatch) motivo = `Servidor da corretora não corresponde (Recebido: '${brokerServer}', Esperado: '${data.brokerServer}')`;
       console.log(`⛔ CONTA BLOQUEADA: ${accountNumber}. Motivo: ${motivo}`);
-      return new Response("Bloqueado", { status: 200, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
+      return new Response("Bloqueado", { status: 200, headers: corsHeaders });
     }
 
   } catch (error: any) {
     console.error("🔥 Erro interno na API de validação:", error);
-    return new Response(`Erro: ${error.message || "Erro interno no servidor"}`, { status: 500, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
+    return new Response(`Erro: ${error.message || "Erro interno no servidor"}`, { status: 500, headers: corsHeaders });
   }
 }
