@@ -54,7 +54,7 @@ export default function CopyLicenseForm({ isOpen, setIsOpen, license, onSuccess 
         account_login_mt5: license.account_login_mt5,
         master_id: license.master_id,
         active: license.active,
-        risk_divider: license.risk_divider
+        risk_divider: license.risk_divider ?? 0
     } : defaultValues,
   });
 
@@ -63,7 +63,7 @@ export default function CopyLicenseForm({ isOpen, setIsOpen, license, onSuccess 
         account_login_mt5: license.account_login_mt5,
         master_id: license.master_id,
         active: license.active,
-        risk_divider: license.risk_divider
+        risk_divider: license.risk_divider ?? 0
     } : defaultValues);
   }, [license, form, isOpen]);
 
@@ -151,7 +151,13 @@ export default function CopyLicenseForm({ isOpen, setIsOpen, license, onSuccess 
                     <FormItem>
                     <FormLabel>Divisor de Risco</FormLabel>
                     <FormControl>
-                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                        <Input 
+                            type="number" 
+                            placeholder="0" 
+                            {...field} 
+                            onChange={e => field.onChange(e.target.valueAsNumber || 0)}
+                            value={field.value ?? ''}
+                        />
                     </FormControl>
                     <FormMessage />
                     </FormItem>

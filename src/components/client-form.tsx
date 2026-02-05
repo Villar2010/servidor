@@ -42,6 +42,20 @@ interface ClientFormProps {
   onSuccess: () => void; // Callback para notificar sucesso
 }
 
+const getSafeDefaultValues = (c?: Client | null) => ({
+  accountNumber: c?.accountNumber || "",
+  name: c?.name || "",
+  email: c?.email || "",
+  brokerServer: c?.brokerServer || "",
+  status: c?.status || "Bloqueado",
+  balanceGross: c?.balanceGross ?? 0,
+  balanceNet: c?.balanceNet ?? 0,
+  openTradesCount: c?.openTradesCount ?? 0,
+  openTradesProfit: c?.openTradesProfit ?? 0,
+  totalInBRL: c?.totalInBRL ?? 0,
+});
+
+
 export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: ClientFormProps) {
   const { toast } = useToast();
   const [isPending, setIsPending] = useState(false);
@@ -49,33 +63,11 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
 
   const form = useForm<Client>({
     resolver: zodResolver(ClientSchema),
-    defaultValues: client || {
-      accountNumber: "",
-      name: "",
-      email: "",
-      brokerServer: "",
-      status: "Bloqueado",
-      balanceGross: 0,
-      balanceNet: 0,
-      openTradesCount: 0,
-      openTradesProfit: 0,
-      totalInBRL: 0,
-    },
+    defaultValues: getSafeDefaultValues(client),
   });
 
   React.useEffect(() => {
-    form.reset(client || {
-      accountNumber: "",
-      name: "",
-      email: "",
-      brokerServer: "",
-      status: "Bloqueado",
-      balanceGross: 0,
-      balanceNet: 0,
-      openTradesCount: 0,
-      openTradesProfit: 0,
-      totalInBRL: 0,
-    });
+    form.reset(getSafeDefaultValues(client));
   }, [client, form, isOpen]);
 
   const onSubmit = async (values: Client) => {
@@ -219,7 +211,7 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
                       <FormItem>
                         <FormLabel>Saldo Bruto</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="10000.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                          <Input type="number" placeholder="10000.00" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber || 0)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -232,7 +224,7 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
                       <FormItem>
                         <FormLabel>Saldo Líquido</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="9500.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                          <Input type="number" placeholder="9500.00" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber || 0)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -245,7 +237,7 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
                       <FormItem>
                         <FormLabel>Negociações Abertas</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="5" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                          <Input type="number" placeholder="5" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber || 0)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -258,7 +250,7 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
                       <FormItem>
                         <FormLabel>Lucro de Negociações Abertas</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="500.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                          <Input type="number" placeholder="500.00" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber || 0)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -271,7 +263,7 @@ export default function ClientForm({ isOpen, setIsOpen, client, onSuccess }: Cli
                       <FormItem>
                         <FormLabel>Total (BRL)</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="50000.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                          <Input type="number" placeholder="50000.00" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.valueAsNumber || 0)} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
