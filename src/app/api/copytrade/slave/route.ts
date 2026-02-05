@@ -59,7 +59,6 @@ export async function GET(request: Request) {
 
     // --- Action: Check License ---
     if (action === "check_license") {
-        // CORRECTED Path to license document
         const licenseRef = db.collection('copytrade_licenses').doc(account);
         const licenseDoc = await licenseRef.get();
 
@@ -75,11 +74,9 @@ export async function GET(request: Request) {
         // Business Rule: Check if master has hit the slave limit
         const masterId = licenseData.master_id;
         
-        // CORRECTED Query on the licenses collection
         const licensesCollectionRef = db.collection('copytrade_licenses');
         const activeSlavesQuery = await licensesCollectionRef.where('master_id', '==', masterId).where('active', '==', true).get();
         
-        // CORRECTED Path to master document
         const masterRef = db.collection('copytrade_masters').doc(masterId);
         const masterDoc = await masterRef.get();
         
@@ -101,7 +98,6 @@ export async function GET(request: Request) {
 
     // --- Action: Get Orders ---
     if (action === "get_orders") {
-        // CORRECTED Path to license document
         const licenseRef = db.collection('copytrade_licenses').doc(account);
         const licenseDoc = await licenseRef.get();
 
@@ -110,7 +106,6 @@ export async function GET(request: Request) {
         }
 
         const masterId = licenseDoc.data()!.master_id;
-        // CORRECTED Path to orders subcollection
         const ordersRef = db.collection('copytrade_masters').doc(masterId).collection('orders');
         const openOrdersQuery = await ordersRef.where('status', '==', 'OPEN').get();
         

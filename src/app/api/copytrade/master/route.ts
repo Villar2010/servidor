@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     const { master_id, order } = validation.data;
     const { ticket_master, ...orderDetails } = order;
 
-    // CORRECTED Path to the order document
+    // Path to the order document
     const orderRef = db.collection('copytrade_masters').doc(master_id).collection('orders').doc(ticket_master);
 
     const dataToSave = {
@@ -72,13 +72,17 @@ export async function POST(request: Request) {
     // Use set with merge to create or update the document
     await orderRef.set(dataToSave, { merge: true });
 
-    // CORRECTED Path to ensure the master document exists and set its creation date if new
+    // Ensure the master document exists, creating it only if necessary
     const masterRef = db.collection('copytrade_masters').doc(master_id);
-    await masterRef.set({ 
-        status: 'ativo', 
-        max_slaves: 10,
-        created_at: new Date().toISOString()
-    }, { merge: true });
+    const masterDoc = await masterRef.get();
+
+    if (!masterDoc.exists()) {
+        await masterRef.set({ 
+            status: 'ativo', 
+            max_slaves: 10,
+            created_at: new Date().toISOString()
+        });
+    }
 
     return NextResponse.json({ success: true, message: `Order ${ticket_master} for master ${master_id} processed.` }, { status: 200, headers: corsHeaders });
 
