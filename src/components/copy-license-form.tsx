@@ -16,6 +16,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -150,7 +151,7 @@ export default function CopyLicenseForm({ isOpen, setIsOpen, license, onSuccess 
                     <FormItem>
                     <FormLabel>Divisor de Risco</FormLabel>
                     <FormControl>
-                        <Input type="number" placeholder="0" {...field} />
+                        <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
