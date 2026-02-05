@@ -1,35 +1,19 @@
 import { NextResponse } from "next/server";
 import * as admin from "firebase-admin";
 
+// Inicialização segura do Firebase Admin
 function getFirebaseAdmin() {
   if (admin.apps.length === 0) {
-    try {
-      const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-      if (!serviceAccountString) throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON not set.");
-      const serviceAccount = JSON.parse(serviceAccountString);
-      const privateKey = serviceAccount.private_key.replace(/\\n/g, '\n');
-      admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: serviceAccount.project_id,
-          clientEmail: serviceAccount.client_email,
-          privateKey: privateKey,
-        }),
-      });
-    } catch (error: any) {
-      throw new Error(`Firebase Admin initialization failed: ${error.message}`);
-    }
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON!);
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: serviceAccount.project_id,
+        clientEmail: serviceAccount.client_email,
+        privateKey: serviceAccount.private_key.replace(/\\n/g, '\n'),
+      }),
+    });
   }
   return admin;
-}
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-export async function OPTIONS() {
-  return new Response(null, { status: 204, headers: corsHeaders });
 }
 
 export async function POST(request: Request) {
@@ -38,14 +22,14 @@ export async function POST(request: Request) {
     const db = adminInstance.firestore();
     const body = await request.json();
     
-    // Adaptando para o formato que o robô envia: { master_id, order: { ... } }
+    // O robô envia "master_id" e "order"
     const { master_id, order } = body;
 
     if (!master_id || !order) {
-      return NextResponse.json({ error: "Dados incompletos" }, { status: 400, headers: corsHeaders });
+      return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
     }
 
-    // Grava a ordem na subcoleção 'orders' do respectivo Master
+    // Grava no Firestore (isso vai criar a coleção copytrade_masters se ela não existir)
     const orderRef = db.collection('copytrade_masters')
                        .doc(master_id)
                        .collection('orders')
@@ -61,14 +45,16 @@ export async function POST(request: Request) {
       timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    return NextResponse.json({ success: true }, { status: 200, headers: corsHeaders });
-
+    return NextResponse.json({ success: true }, { status: 200 });
   } catch (error: any) {
-    console.error("Erro Master API:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500, headers: corsHeaders });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-export async function GET() {
-    return NextResponse.json({ status: "API Master Online" }, { status: 200, headers: corsHeaders });
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: { 
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  }});
 }
