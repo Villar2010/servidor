@@ -63,7 +63,7 @@ export async function GET(request: Request) {
         const licenseRef = db.collection('copytrade_licenses').doc(account);
         const licenseDoc = await licenseRef.get();
 
-        if (!licenseDoc.exists) {
+        if (!licenseDoc.exists()) {
             return NextResponse.json({ status: "blocked", reason: "license_not_found" }, { status: 200, headers: corsHeaders });
         }
 
@@ -82,6 +82,7 @@ export async function GET(request: Request) {
         // CORRECTED Path to master document
         const masterRef = db.collection('copytrade_masters').doc(masterId);
         const masterDoc = await masterRef.get();
+        
         const maxSlaves = masterDoc.exists() ? (masterDoc.data()!.max_slaves || 10) : 10;
         
         if (activeSlavesQuery.size > maxSlaves) {
@@ -104,7 +105,7 @@ export async function GET(request: Request) {
         const licenseRef = db.collection('copytrade_licenses').doc(account);
         const licenseDoc = await licenseRef.get();
 
-        if (!licenseDoc.exists || !licenseDoc.data()!.active) {
+        if (!licenseDoc.exists() || !licenseDoc.data()!.active) {
             return NextResponse.json({ error: "Unauthorized: Inactive or non-existent license." }, { status: 403, headers: corsHeaders });
         }
 
