@@ -18,13 +18,23 @@ export const MasterApiSchema = z.object({
     order: CopyOrderSchema
 });
 
-// Schema for a slave's license
+// Schema for a slave's license document in Firestore
 export const CopyLicenseSchema = z.object({
+    account_login_mt5: z.string().min(1, "O login da conta MT5 é obrigatório."),
     active: z.boolean(),
-    master_id: z.string(),
-    risk_divider: z.number().default(0),
-    created_at: z.string(),
+    master_id: z.string().min(1, "Master ID é obrigatório"),
+    risk_divider: z.coerce.number().default(0),
+    created_at: z.string().optional(),
     last_check: z.string().optional(),
 });
-
 export type CopyLicense = z.infer<typeof CopyLicenseSchema>;
+
+
+// Schema for the form used to create/edit a license in the dashboard
+export const CopyLicenseFormSchema = z.object({
+    account_login_mt5: z.string().min(1, "O login da conta MT5 é obrigatório."),
+    master_id: z.string().min(1, "O Master ID é obrigatório."),
+    active: z.boolean().default(true),
+    risk_divider: z.coerce.number().default(0),
+});
+export type CopyLicenseForm = z.infer<typeof CopyLicenseFormSchema>;

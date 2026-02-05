@@ -179,7 +179,7 @@
           "schema": {
             "$ref": "#/backend/entities/Client"
           },
-          "description": "Stores client data, including license status (Liberado/Bloqueado), MT5 account details, and balances. Document ID is the accountNumber.",
+          "description": "Stores client data for the original license system. Document ID is the accountNumber.",
           "params": [
             {
               "name": "accountNumber",
@@ -189,30 +189,30 @@
         }
       },
       {
-        "path": "/copytrade/masters/{master_id}",
+        "path": "/copytrade_masters/{master_id}",
         "definition": {
           "entityName": "CopyMaster",
           "schema": { "$ref": "#/backend/entities/CopyMaster" },
-          "description": "Stores master account configuration for the copy trade system."
+          "description": "Root collection for master accounts in the copy trade system."
         }
       },
       {
-        "path": "/copytrade/masters/{master_id}/orders/{ticket_master}",
+        "path": "/copytrade_masters/{master_id}/orders/{ticket_master}",
         "definition": {
           "entityName": "CopyOrder",
           "schema": { "$ref": "#/backend/entities/CopyOrder" },
-          "description": "Stores individual trade orders sent by a master account."
+          "description": "Subcollection storing individual trade orders for a master account."
         }
       },
       {
-        "path": "/copytrade/licenses/{account_login_mt5}",
+        "path": "/copytrade_licenses/{account_login_mt5}",
         "definition": {
           "entityName": "CopyLicense",
           "schema": { "$ref": "#/backend/entities/CopyLicense" },
-          "description": "Stores slave account license details, linking them to a master."
+          "description": "Root collection for slave account licenses. The document ID is the slave's MT5 account number."
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to manage MT5 client licenses and data securely. A single `clients` collection is used, with each document representing a client, identified by their `accountNumber`. This structure directly reflects the provided code and simplifies data access and management. To ensure authorization independence (CRITICAL design principle) and support QAPs, the `status` field within each client document is crucial. The application logic validates the `status` before granting access, ensuring that only 'Liberado' clients can proceed. The `accountNumber` as document ID allows for direct access and updates to client data. This achieves Authorization Independence because the rules only need to check the document in the clients collection. Segregation of the license statuses is not required, so the DB is cleaner. The new `/copytrade` root collection is added to isolate the entire copy trading module, with subcollections for masters, orders, and licenses, as requested. This prevents any interference with the existing client management system."
+    "reasoning": "The Firestore structure is updated to correctly support the Copy Trade module. The original `/clients` collection remains untouched. Two new root-level collections, `copytrade_masters` and `copytrade_licenses`, are introduced for better isolation, scalability, and query performance. This structure avoids overly nested data, which simplifies API logic and security rules. Using root collections allows for direct queries (e.g., finding all slaves for a master) without needing complex collection group queries, which is critical for the slave limit business rule. This corrected structure is more conventional and robust for Firestore."
   }
 }

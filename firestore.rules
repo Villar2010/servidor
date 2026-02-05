@@ -2,36 +2,18 @@
  * @fileoverview Firestore Security Rules for the MT5 Client Management App.
  *
  * Core Philosophy:
- * This ruleset enforces a strict, document-level access control model based on client MT5 account numbers.
- * Only authenticated users can read or write client data, and write access is further restricted based on the client's status.
- * Data integrity is maintained by ensuring that the document ID (accountNumber) matches the `accountNumber` field in the document.
- *
- * Data Structure:
- * All client data is stored in the `/clients/{accountNumber}` collection, where `{accountNumber}` is the client's MT5 account number.
- * Each document contains client details such as name, email, balances, license status, and last update timestamp.
- * The copy trade system is completely isolated under the `/copytrade` path.
- *
- * Key Security Decisions:
- * - Clients can only be created with a 'Liberado' status.
- * - The accountNumber, once set during creation, cannot be updated to prevent privilege escalation or misassociation of client data.
- * - Data validation is kept minimal to allow for rapid prototyping. Only authorization-critical fields (`accountNumber`) are validated.
+ * This ruleset enforces a strict, document-level access control model. The original client
+ * license system and the new Copy Trade system are completely isolated.
  *
 .
- *
- * Denormalization for Authorization:
- * The `status` field is denormalized directly onto the client document.
- * This allows the security rules to quickly check the license status without needing to perform additional reads, ensuring Authorization Independence.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Manages access control for client documents.
+     * @description Manages access control for the original client license documents.
      * @path /clients/{accountNumber}
-     * @allow (get, create, update, delete): Any authenticated user can access individual client documents.
-     * @allow (list): Any authenticated user can list all clients to populate the dashboard.
-     * @principle Enforces document ownership (accountNumber) and status-based authorization.
      */
     match /clients/{accountNumber} {
       allow get, create, update, delete: if isSignedIn();
@@ -42,28 +24,25 @@ service cloud.firestore {
 
     /**
      * @description Manages master account data for the copy trade system.
-     * @path /copytrade/masters/{master_id}
-     * @allow (read, write): Authenticated users (EAs) can read/write master data.
+     * @path /copytrade_masters/{master_id}
      */
-    match /copytrade/masters/{master_id} {
+    match /copytrade_masters/{master_id} {
         allow read, write: if isSignedIn();
     }
     
     /**
      * @description Manages orders sent by a master account.
-     * @path /copytrade/masters/{master_id}/orders/{ticket_master}
-     * @allow (read, write): Authenticated users (EAs) can create, update, and read orders.
+     * @path /copytrade_masters/{master_id}/orders/{ticket_master}
      */
-    match /copytrade/masters/{master_id}/orders/{ticket_master} {
+    match /copytrade_masters/{master_id}/orders/{ticket_master} {
         allow read, write: if isSignedIn();
     }
     
     /**
-     * @description Manages slave account licenses.
-     * @path /copytrade/licenses/{account_login_mt5}
-     * @allow (read, write): Authenticated users (EAs) can read/write license data. The API handles business logic.
+     * @description Manages slave account licenses for the copy trade system.
+     * @path /copytrade_licenses/{account_login_mt5}
      */
-    match /copytrade/licenses/{account_login_mt5} {
+    match /copytrade_licenses/{account_login_mt5} {
       allow read, write: if isSignedIn();
     }
 
