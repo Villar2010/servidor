@@ -9,11 +9,14 @@
  * Data Structure:
  * All client data is stored in the `/clients/{accountNumber}` collection, where `{accountNumber}` is the client's MT5 account number.
  * Each document contains client details such as name, email, balances, license status, and last update timestamp.
+ * The copy trade system is completely isolated under the `/copytrade` path.
  *
  * Key Security Decisions:
  * - Clients can only be created with a 'Liberado' status.
  * - The accountNumber, once set during creation, cannot be updated to prevent privilege escalation or misassociation of client data.
  * - Data validation is kept minimal to allow for rapid prototyping. Only authorization-critical fields (`accountNumber`) are validated.
+ *
+.
  *
  * Denormalization for Authorization:
  * The `status` field is denormalized directly onto the client document.
@@ -33,6 +36,35 @@ service cloud.firestore {
     match /clients/{accountNumber} {
       allow get, create, update, delete: if isSignedIn();
       allow list: if isSignedIn();
+    }
+    
+    // --- ISOLATED COPY TRADE MODULE RULES ---
+
+    /**
+     * @description Manages master account data for the copy trade system.
+     * @path /copytrade/masters/{master_id}
+     * @allow (read, write): Authenticated users (EAs) can read/write master data.
+     */
+    match /copytrade/masters/{master_id} {
+        allow read, write: if isSignedIn();
+    }
+    
+    /**
+     * @description Manages orders sent by a master account.
+     * @path /copytrade/masters/{master_id}/orders/{ticket_master}
+     * @allow (read, write): Authenticated users (EAs) can create, update, and read orders.
+     */
+    match /copytrade/masters/{master_id}/orders/{ticket_master} {
+        allow read, write: if isSignedIn();
+    }
+    
+    /**
+     * @description Manages slave account licenses.
+     * @path /copytrade/licenses/{account_login_mt5}
+     * @allow (read, write): Authenticated users (EAs) can read/write license data. The API handles business logic.
+     */
+    match /copytrade/licenses/{account_login_mt5} {
+      allow read, write: if isSignedIn();
     }
 
     // Helper function to check if the user is signed in.

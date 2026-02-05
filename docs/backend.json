@@ -62,6 +62,106 @@
         "accountNumber",
         "brokerServer"
       ]
+    },
+    "CopyMaster": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Copy Master",
+      "type": "object",
+      "description": "Represents a Master account in the copy trade system.",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["ativo", "inativo"],
+          "description": "The status of the master account."
+        },
+        "max_slaves": {
+          "type": "number",
+          "description": "Maximum number of slave accounts allowed.",
+          "default": 10
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the master was created."
+        }
+      },
+      "required": ["status", "max_slaves", "created_at"]
+    },
+    "CopyOrder": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Copy Order",
+      "type": "object",
+      "description": "Represents a trade order from a master account.",
+      "properties": {
+        "ticket_master": {
+          "type": "string",
+          "description": "The unique ticket ID from the master's MT5."
+        },
+        "symbol": {
+          "type": "string",
+          "description": "The trading symbol (e.g., EURUSD)."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["BUY", "SELL"],
+          "description": "The type of the order."
+        },
+        "sl": {
+          "type": "number",
+          "description": "The stop-loss price."
+        },
+        "tp": {
+          "type": "number",
+          "description": "The take-profit price."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["OPEN", "CLOSED"],
+          "description": "The current status of the order."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the order was created."
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the last update."
+        }
+      },
+      "required": ["ticket_master", "symbol", "type", "status", "created_at", "updated_at"]
+    },
+    "CopyLicense": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Copy License",
+      "type": "object",
+      "description": "Represents a slave account's license to copy a master.",
+      "properties": {
+        "active": {
+          "type": "boolean",
+          "description": "Whether the license is active or not."
+        },
+        "master_id": {
+          "type": "string",
+          "description": "The ID of the master account to copy."
+        },
+        "risk_divider": {
+          "type": "number",
+          "description": "Risk division factor for the slave account."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the license was created."
+        },
+        "last_check": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the last license check."
+        }
+      },
+      "required": ["active", "master_id", "created_at"]
     }
   },
   "auth": {
@@ -87,8 +187,32 @@
             }
           ]
         }
+      },
+      {
+        "path": "/copytrade/masters/{master_id}",
+        "definition": {
+          "entityName": "CopyMaster",
+          "schema": { "$ref": "#/backend/entities/CopyMaster" },
+          "description": "Stores master account configuration for the copy trade system."
+        }
+      },
+      {
+        "path": "/copytrade/masters/{master_id}/orders/{ticket_master}",
+        "definition": {
+          "entityName": "CopyOrder",
+          "schema": { "$ref": "#/backend/entities/CopyOrder" },
+          "description": "Stores individual trade orders sent by a master account."
+        }
+      },
+      {
+        "path": "/copytrade/licenses/{account_login_mt5}",
+        "definition": {
+          "entityName": "CopyLicense",
+          "schema": { "$ref": "#/backend/entities/CopyLicense" },
+          "description": "Stores slave account license details, linking them to a master."
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to manage MT5 client licenses and data securely. A single `clients` collection is used, with each document representing a client, identified by their `accountNumber`. This structure directly reflects the provided code and simplifies data access and management. To ensure authorization independence (CRITICAL design principle) and support QAPs, the `status` field within each client document is crucial. The application logic validates the `status` before granting access, ensuring that only 'Liberado' clients can proceed. The `accountNumber` as document ID allows for direct access and updates to client data. This achieves Authorization Independence because the rules only need to check the document in the clients collection. Segregation of the license statuses is not required, so the DB is cleaner."
+    "reasoning": "The Firestore structure is designed to manage MT5 client licenses and data securely. A single `clients` collection is used, with each document representing a client, identified by their `accountNumber`. This structure directly reflects the provided code and simplifies data access and management. To ensure authorization independence (CRITICAL design principle) and support QAPs, the `status` field within each client document is crucial. The application logic validates the `status` before granting access, ensuring that only 'Liberado' clients can proceed. The `accountNumber` as document ID allows for direct access and updates to client data. This achieves Authorization Independence because the rules only need to check the document in the clients collection. Segregation of the license statuses is not required, so the DB is cleaner. The new `/copytrade` root collection is added to isolate the entire copy trading module, with subcollections for masters, orders, and licenses, as requested. This prevents any interference with the existing client management system."
   }
 }
