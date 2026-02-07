@@ -12,10 +12,36 @@ const db = admin.firestore();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { master_id, order } = body;
+    // Adicionamos 'action' para identificar quando é um comando de fechamento
+    const { master_id, order, action } = body;
 
-    if (!master_id || !order) {
-      return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
+    if (!master_id) {
+      return NextResponse.json({ error: "Master ID ausente" }, { status: 400 });
+    }
+
+    // --- LÓGICA DE FECHAMENTO (CLOSE_ALL) ---
+    // Se o Master enviar action: "CLOSE_ALL", limpamos a coleção de ordens
+    if (action === "CLOSE_ALL") {
+      const ordersRef = db.collection('copytrade_masters')
+                         .doc(master_id)
+                         .collection('orders');
+      
+      const snapshot = await ordersRef.get();
+      
+      if (!snapshot.empty) {
+        const batch = db.batch();
+        snapshot.docs.forEach((doc) => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+      }
+
+      return NextResponse.json({ success: true, message: "Ordens limpas com sucesso" });
+    }
+
+    // --- LÓGICA DE ABERTURA/ATUALIZAÇÃO ---
+    if (!order || !order.ticket_master) {
+      return NextResponse.json({ error: "Dados da ordem incompletos" }, { status: 400 });
     }
 
     const orderRef = db.collection('copytrade_masters')
@@ -33,8 +59,9 @@ export async function POST(request: Request) {
     }, { merge: true });
 
     return NextResponse.json({ success: true });
+
   } catch (error: any) {
-    console.error("Erro interno na API:", error.message);
+    console.error("Erro interno na API Master:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
