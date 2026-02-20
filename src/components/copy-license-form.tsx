@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,6 +44,7 @@ export default function CopyLicenseForm({ isOpen, setIsOpen, license, onSuccess 
 
   const defaultValues = {
     account_login_mt5: "",
+    name: "",
     master_id: "",
     active: true,
     risk_divider: 0,
@@ -52,6 +54,7 @@ export default function CopyLicenseForm({ isOpen, setIsOpen, license, onSuccess 
     resolver: zodResolver(CopyLicenseFormSchema),
     defaultValues: license ? {
         account_login_mt5: license.account_login_mt5,
+        name: license.name || "",
         master_id: license.master_id,
         active: license.active,
         risk_divider: license.risk_divider ?? 0
@@ -61,6 +64,7 @@ export default function CopyLicenseForm({ isOpen, setIsOpen, license, onSuccess 
   React.useEffect(() => {
     form.reset(license ? {
         account_login_mt5: license.account_login_mt5,
+        name: license.name || "",
         master_id: license.master_id,
         active: license.active,
         risk_divider: license.risk_divider ?? 0
@@ -81,7 +85,6 @@ export default function CopyLicenseForm({ isOpen, setIsOpen, license, onSuccess 
       
       const dataToSave = {
         ...validatedData,
-        // Add created_at only if it's a new document
         ...(!license && { created_at: new Date().toISOString() }),
       };
 
@@ -126,6 +129,19 @@ export default function CopyLicenseForm({ isOpen, setIsOpen, license, onSuccess 
                     <FormLabel>Conta MT5 do Slave</FormLabel>
                     <FormControl>
                         <Input placeholder="1234567" {...field} disabled={!!license} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Nome do Dono (Opcional)</FormLabel>
+                    <FormControl>
+                        <Input placeholder="João da Silva" {...field} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>

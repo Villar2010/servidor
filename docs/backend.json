@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Client": {
@@ -138,6 +139,10 @@
       "type": "object",
       "description": "Represents a slave account's license to copy a master.",
       "properties": {
+        "name": {
+          "type": "string",
+          "description": "Internal name for identifying the license owner."
+        },
         "active": {
           "type": "boolean",
           "description": "Whether the license is active or not."

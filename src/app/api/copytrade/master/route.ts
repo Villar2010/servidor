@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import * as admin from "firebase-admin";
 
@@ -12,15 +13,12 @@ const db = admin.firestore();
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    // Adicionamos 'action' para identificar quando é um comando de fechamento
     const { master_id, order, action } = body;
 
     if (!master_id) {
       return NextResponse.json({ error: "Master ID ausente" }, { status: 400 });
     }
 
-    // --- LÓGICA DE FECHAMENTO (CLOSE_ALL) ---
-    // Se o Master enviar action: "CLOSE_ALL", limpamos a coleção de ordens
     if (action === "CLOSE_ALL") {
       const ordersRef = db.collection('copytrade_masters')
                          .doc(master_id)
@@ -39,7 +37,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: "Ordens limpas com sucesso" });
     }
 
-    // --- LÓGICA DE ABERTURA/ATUALIZAÇÃO ---
     if (!order || !order.ticket_master) {
       return NextResponse.json({ error: "Dados da ordem incompletos" }, { status: 400 });
     }

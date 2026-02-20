@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import * as admin from "firebase-admin";
 
@@ -29,6 +30,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+// Helper function to safely check if a document exists in both SDK versions
+const checkExists = (snap: any) => {
+  if (typeof snap.exists === 'function') return snap.exists();
+  return snap.exists;
+};
+
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders });
 }
@@ -49,7 +56,7 @@ export async function GET(request: Request) {
       const licenseRef = db.collection('copytrade_licenses').doc(account);
       const licenseDoc = await licenseRef.get();
 
-      if (!licenseDoc.exists) {
+      if (!checkExists(licenseDoc)) {
         return NextResponse.json({ status: "blocked", reason: "license_not_found" }, { status: 200, headers: corsHeaders });
       }
 
@@ -66,7 +73,7 @@ export async function GET(request: Request) {
         
       const masterDoc = await db.collection('copytrade_masters').doc(masterId).get();
       const masterData = masterDoc.data();
-      const maxSlaves = masterDoc.exists && masterData ? (masterData.max_slaves || 10) : 10;
+      const maxSlaves = checkExists(masterDoc) && masterData ? (masterData.max_slaves || 10) : 10;
 
       if (activeSlavesQuery.size > maxSlaves) {
         return NextResponse.json({ status: "blocked", reason: "master_limit_reached" }, { status: 200, headers: corsHeaders });
@@ -85,7 +92,7 @@ export async function GET(request: Request) {
       const licenseDoc = await db.collection('copytrade_licenses').doc(account).get();
       const licenseData = licenseDoc.data();
 
-      if (!licenseDoc.exists || !licenseData?.active) {
+      if (!checkExists(licenseDoc) || !licenseData?.active) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403, headers: corsHeaders });
       }
 

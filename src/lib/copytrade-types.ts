@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 // Schema for an order sent by an EA Master
@@ -20,7 +21,9 @@ export const MasterApiSchema = z.object({
 
 // Schema for a slave's license document in Firestore
 export const CopyLicenseSchema = z.object({
+    id: z.string().optional(),
     account_login_mt5: z.string().min(1, "O login da conta MT5 é obrigatório."),
+    name: z.string().optional(),
     active: z.boolean(),
     master_id: z.string().min(1, "Master ID é obrigatório"),
     risk_divider: z.coerce.number().default(0),
@@ -33,6 +36,7 @@ export type CopyLicense = z.infer<typeof CopyLicenseSchema>;
 // Schema for the form used to create/edit a license in the dashboard
 export const CopyLicenseFormSchema = z.object({
     account_login_mt5: z.string().min(1, "O login da conta MT5 é obrigatório."),
+    name: z.string().optional(),
     master_id: z.string().min(1, "O Master ID é obrigatório."),
     active: z.boolean().default(true),
     risk_divider: z.coerce.number().default(0),

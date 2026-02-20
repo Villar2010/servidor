@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -76,6 +77,7 @@ export default function CopyLicenseTable() {
         const term = searchTerm.toLowerCase();
         return (
             license.account_login_mt5.toLowerCase().includes(term) ||
+            (license.name && license.name.toLowerCase().includes(term)) ||
             (license.master_id && license.master_id.toLowerCase().includes(term))
         );
     });
@@ -88,7 +90,7 @@ export default function CopyLicenseTable() {
     if (isLoading) {
       return (
         <TableRow>
-          <TableCell colSpan={6}>
+          <TableCell colSpan={7}>
             <div className="space-y-2">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
@@ -101,7 +103,7 @@ export default function CopyLicenseTable() {
     if (error) {
        return (
         <TableRow>
-          <TableCell colSpan={6}>
+          <TableCell colSpan={7}>
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Erro ao Carregar Licenças</AlertTitle>
@@ -119,7 +121,7 @@ export default function CopyLicenseTable() {
        return (
         <TableRow>
            <TableCell
-             colSpan={6}
+             colSpan={7}
              className="h-24 text-center text-muted-foreground"
            >
              <div className="flex flex-col items-center gap-2">
@@ -135,7 +137,7 @@ export default function CopyLicenseTable() {
       return (
          <TableRow>
             <TableCell
-              colSpan={6}
+              colSpan={7}
               className="h-24 text-center text-muted-foreground"
             >
               {searchTerm ? "Nenhuma licença encontrada com os critérios de busca." : "Nenhuma licença de cópia cadastrada."}
@@ -157,6 +159,7 @@ export default function CopyLicenseTable() {
         <TableCell className="font-medium">
           {license.account_login_mt5}
         </TableCell>
+        <TableCell className="hidden md:table-cell">{license.name || "-"}</TableCell>
         <TableCell className="hidden md:table-cell">{license.master_id || "-"}</TableCell>
         <TableCell className="font-mono">{license.risk_divider ?? '0'}</TableCell>
         <TableCell className="hidden sm:table-cell">
@@ -185,7 +188,7 @@ export default function CopyLicenseTable() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         type="search"
-                        placeholder="Pesquisar por conta, master..."
+                        placeholder="Pesquisar por conta, nome, master..."
                         className="pl-8 w-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -204,6 +207,7 @@ export default function CopyLicenseTable() {
                 <TableRow>
                   <TableHead>Status</TableHead>
                   <TableHead>Conta Slave</TableHead>
+                  <TableHead className="hidden md:table-cell">Nome</TableHead>
                   <TableHead className="hidden md:table-cell">Master ID</TableHead>
                   <TableHead>Divisor Risco</TableHead>
                   <TableHead className="hidden sm:table-cell">Última Checagem</TableHead>
